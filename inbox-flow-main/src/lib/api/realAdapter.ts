@@ -1,31 +1,51 @@
 import { http } from './http';
 
 function mapEmail(e: any) {
-  const fromName =
-    typeof e.from === 'string' && e.from.includes('@')
-      ? e.from.split('@')[0]
-      : (e.from ?? 'Unknown');
+  // Parse "Name <email@example.com>" or just "email@example.com"
+  const fromRaw = e.from ?? 'Unknown';
+  let fromName = fromRaw;
+  let fromEmail = fromRaw;
+
+  // Try to parse "Name <email>" format
+  const match = fromRaw.match(/^(.+?)\s*<(.+?)>$/);
+  if (match) {
+    fromName = match[1].trim().replace(/^["']|["']$/g, ''); // Remove quotes
+    fromEmail = match[2].trim();
+  } else if (fromRaw.includes('@')) {
+    // Just an email address
+    fromName = fromRaw.split('@')[0];
+    fromEmail = fromRaw;
+  }
 
   return {
     id: e.id,
     from: e.from,
     fromName,
+    fromEmail,
     subject: e.subject ?? '(no subject)',
     snippet: e.snippet ?? '',
     body: e.body ?? '',
+    bodyText: e.body ?? '', // Frontend expects bodyText
     receivedAt: e.receivedAt,
 
     // fields expected by UI (defaults for now)
-    isRead: false,
+    isRead: e.isRead ?? false,
     needsReply: false,
     priorityScore: 50,
     category: undefined,
+    tags: [], // Frontend expects tags array
   };
 }
 
 export const api = {
-  getEmails: async (_params: any) => {
-    const list = await http.get<any[]>('/emails');
+  getEmails: async (params: any) => {
+    const qs = new URLSearchParams();
+    if (params?.filter) qs.set('filter', params.filter);
+    if (params?.search) qs.set('search', params.search);
+    if (params?.limit) qs.set('limit', String(params.limit));
+
+    const path = qs.toString() ? `/emails?${qs.toString()}` : '/emails';
+    const list = await http.get<any[]>(path);
     return { data: list.map(mapEmail) };
   },
 
@@ -52,7 +72,8 @@ export const api = {
   deleteEvent: (id: string) => http.delete<any>(`/events/${id}`),
 
   // Still mock / not implemented yet:
-  markEmailRead: async (_id: string, _isRead: boolean) => ({ ok: true }),
+  markEmailRead: async (id: string, isRead: boolean) =>
+    http.patch<any>(`/emails/${id}`, { isRead }),
   classifyEmail: async (_emailId: string) => ({ jobId: 'not-implemented' }),
   extractDates: async (_emailId: string) => ({ jobId: 'not-implemented' }),
   getJob: async (jobId: string) => ({ id: jobId, status: 'done', result: null }),

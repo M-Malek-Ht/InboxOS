@@ -1,4 +1,5 @@
-import { Controller, Get, Param, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Get, Param, NotFoundException, Patch, Query, UseGuards, Request } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EmailsService } from './emails.service';
 
 @Controller('emails')
@@ -6,15 +7,35 @@ export class EmailsController {
   constructor(private readonly emails: EmailsService) {}
 
   @Get()
-  async list() {
-    await this.emails.seedIfEmpty();
-    return this.emails.list();
+  @UseGuards(JwtAuthGuard)
+  async list(
+    @Request() req: any,
+    @Query('filter') filter?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.emails.listForUser(req.user.id, {
+      filter,
+      search,
+      limit: limit ? Number(limit) : undefined,
+    });
   }
 
   @Get(':id')
-  async get(@Param('id') id: string) {
-    const email = await this.emails.get(id);
+  @UseGuards(JwtAuthGuard)
+  async get(@Param('id') id: string, @Request() req: any) {
+    const email = await this.emails.getForUser(req.user.id, id);
     if (!email) throw new NotFoundException('Email not found');
     return email;
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard)
+  async setRead(
+    @Param('id') id: string,
+    @Body() body: { isRead: boolean },
+    @Request() req: any,
+  ) {
+    return this.emails.setReadState(req.user.id, id, !!body.isRead);
   }
 }

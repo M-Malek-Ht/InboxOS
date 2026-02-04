@@ -10,8 +10,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/components/AuthContext';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -25,6 +27,7 @@ const navItems = [
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, logout } = useAuth();
 
   return (
     <motion.aside
@@ -89,8 +92,8 @@ export function AppSidebar() {
         </ul>
       </nav>
 
-      {/* Settings */}
-      <div className="p-2 border-t border-sidebar-border">
+      {/* Settings + User */}
+      <div className="p-2 border-t border-sidebar-border space-y-1">
         <NavLink
           to="/settings"
           className={cn(
@@ -115,6 +118,36 @@ export function AppSidebar() {
             )}
           </AnimatePresence>
         </NavLink>
+
+        {/* Signed-in email */}
+        {!collapsed && user && (
+          <p className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</p>
+        )}
+
+        {/* Logout */}
+        <button
+          onClick={logout}
+          className={cn(
+            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full',
+            'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            'transition-colors duration-150',
+            collapsed && 'justify-center px-0'
+          )}
+        >
+          <LogOut className="h-5 w-5 flex-shrink-0" />
+          <AnimatePresence mode="wait">
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="overflow-hidden whitespace-nowrap"
+              >
+                Log out
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
       </div>
 
       {/* Collapse Toggle */}

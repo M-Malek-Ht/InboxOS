@@ -6,6 +6,8 @@ import { EmailsModule } from './emails/emails.module';
 import { TasksModule } from './tasks/tasks.module';
 import { EventsModule } from './events/events.module';
 import { DraftsModule } from './drafts/drafts.module';
+import { UsersModule } from './users/users.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -32,6 +34,10 @@ import { DraftsModule } from './drafts/drafts.module';
     EventsModule,
 
     DraftsModule,
+
+    UsersModule,
+
+    AuthModule,
   ],
   controllers: [HealthController],
 })

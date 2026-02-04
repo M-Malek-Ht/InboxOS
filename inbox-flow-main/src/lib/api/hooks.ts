@@ -39,7 +39,31 @@ export function useMarkEmailRead() {
   return useMutation({
     mutationFn: ({ id, isRead }: { id: string; isRead: boolean }) => 
       api.markEmailRead(id, isRead),
-    onSuccess: (_, { id }) => {
+    onMutate: async ({ id, isRead }) => {
+      await queryClient.cancelQueries({ queryKey: ['emails'] });
+
+      const previousEmail = queryClient.getQueryData(['email', id]);
+      queryClient.setQueryData(['email', id], (old: any) =>
+        old ? { ...old, isRead } : old,
+      );
+
+      queryClient.setQueriesData({ queryKey: ['emails'] }, (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((e: any) => (e.id === id ? { ...e, isRead } : e)),
+        };
+      });
+
+      return { previousEmail };
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousEmail) {
+        queryClient.setQueryData(['email', id], context.previousEmail);
+      }
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    },
+    onSuccess: (_res, { id }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.email(id) });
       queryClient.invalidateQueries({ queryKey: ['emails'] });
     },

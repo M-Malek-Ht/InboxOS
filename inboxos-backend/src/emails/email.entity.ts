@@ -17,6 +17,9 @@ export class EmailEntity {
   @Column({ type: 'text', default: '' })
   body: string;
 
+  @Column({ default: false })
+  isRead: boolean;
+
   @CreateDateColumn()
   receivedAt: Date;
 }
