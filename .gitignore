@@ -1,0 +1,5 @@
+
+inboxos-backend/src/auth/data
+.env
+.env.*
+
