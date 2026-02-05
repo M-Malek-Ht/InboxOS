@@ -6,7 +6,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { GoogleStrategy } from './strategies/google.strategy';
-import { GithubStrategy } from './strategies/github.strategy';
+import { MicrosoftStrategy } from './strategies/microsoft.strategy';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { Account } from './account.entity';
 import { UsersModule } from '../users/users.module';
@@ -27,6 +27,6 @@ import { UsersModule } from '../users/users.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, GoogleStrategy, GithubStrategy, JwtStrategy],
+  providers: [AuthService, GoogleStrategy, MicrosoftStrategy, JwtStrategy],
 })
 export class AuthModule {}

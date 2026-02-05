@@ -17,7 +17,7 @@ class GoogleCallbackGuard extends AuthGuard('google') {
   }
 }
 
-class GithubCallbackGuard extends AuthGuard('github') {
+class MicrosoftCallbackGuard extends AuthGuard('microsoft') {
   getAuthenticateOptions() {
     return { failureRedirect: '/auth/failed' };
   }
@@ -48,17 +48,17 @@ export class AuthController {
     res.redirect(process.env.FRONTEND_URL || 'http://localhost:8080');
   }
 
-  // ── GitHub ──────────────────────────────────────────
+  // ── Microsoft ─────────────────────────────────────────
 
-  @Get('github')
-  @UseGuards(AuthGuard('github'))
-  async githubAuth() {
-    // Passport redirects to GitHub; this body is never reached.
+  @Get('microsoft')
+  @UseGuards(AuthGuard('microsoft'))
+  async microsoftAuth() {
+    // Passport redirects to Microsoft; this body is never reached.
   }
 
-  @Get('github/callback')
-  @UseGuards(GithubCallbackGuard)
-  async githubCallback(@Request() req: any, @Response() res: any) {
+  @Get('microsoft/callback')
+  @UseGuards(MicrosoftCallbackGuard)
+  async microsoftCallback(@Request() req: any, @Response() res: any) {
     const token = this.authService.generateToken(req.user);
     res.cookie('accessToken', token, {
       httpOnly: true,

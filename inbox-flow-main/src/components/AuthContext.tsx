@@ -9,7 +9,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
-  login: (provider: 'google' | 'github') => void;
+  login: (provider: 'google' | 'microsoft') => void;
   logout: () => void;
 }
 
@@ -29,7 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setIsLoading(false));
   }, []);
 
-  const login = useCallback((provider: 'google' | 'github') => {
+  const login = useCallback((provider: 'google' | 'microsoft') => {
     window.location.href = `${API_URL}/auth/${provider}`;
   }, []);
 

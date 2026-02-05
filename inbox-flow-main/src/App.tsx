@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/components/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Dashboard from "./pages/Dashboard";
+import MarketingPage from "./pages/Index";
 import InboxPage from "./pages/InboxPage";
 import DraftsPage from "./pages/DraftsPage";
 import WorkflowsPage from "./pages/WorkflowsPage";
@@ -14,15 +15,28 @@ import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 
+const AuthLoading = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center animate-pulse" />
+  </div>
+);
+
 function AuthGuard() {
   const { user, isLoading } = useAuth();
-  if (isLoading) return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center animate-pulse" />
-    </div>
-  );
+  if (isLoading) return <AuthLoading />;
   if (!user) return <Navigate to="/login" replace />;
   return <AppLayout />;
+}
+
+function HomeRoute() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <AuthLoading />;
+  if (!user) return <MarketingPage />;
+  return (
+    <AppLayout>
+      <Dashboard />
+    </AppLayout>
+  );
 }
 
 const queryClient = new QueryClient({
@@ -42,9 +56,9 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <Routes>
+              <Route path="/" element={<HomeRoute />} />
               <Route path="/login" element={<LoginPage />} />
               <Route element={<AuthGuard />}>
-                <Route path="/" element={<Dashboard />} />
                 <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/drafts" element={<DraftsPage />} />
                 <Route path="/workflows" element={<WorkflowsPage />} />
