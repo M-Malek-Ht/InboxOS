@@ -22,7 +22,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
 
   async validate(
     accessToken: string,
-    _refreshToken: string | undefined,
+    refreshToken: string | undefined,
     profile: {
       id: string;
       displayName?: string;
@@ -46,10 +46,16 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
     }
 
     const user = await this.authService.validateOrCreateOAuthUser(
-      email,
-      'microsoft',
-      profile.id,
-    );
-    done(null, user);
+  email,
+  'microsoft',
+  profile.id,
+);
+
+done(null, {
+  ...user,
+  microsoftAccessToken: accessToken,
+  microsoftRefreshToken: refreshToken,
+});
+
   }
 }
