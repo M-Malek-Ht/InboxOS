@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { EmailsController } from './emails.controller';
 import { EmailsService } from './emails.service';
 import { GmailService } from './gmail.service';
+import { MicrosoftMailService } from './microsoft-mail.service';
 import { EmailEntity } from './email.entity';
 import { Account } from '../auth/account.entity';
 
@@ -13,6 +14,6 @@ import { Account } from '../auth/account.entity';
     ConfigModule,
   ],
   controllers: [EmailsController],
-  providers: [EmailsService, GmailService],
+  providers: [EmailsService, GmailService, MicrosoftMailService],
 })
 export class EmailsModule {}
