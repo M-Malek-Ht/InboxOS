@@ -24,6 +24,9 @@ import { AuthModule } from './auth/auth.module';
         database: cfg.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: true, // dev only
+        ssl: true,
+        extra: { ssl: { rejectUnauthorized: false } },
+
       }),
     }),
 

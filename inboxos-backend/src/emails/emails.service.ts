@@ -3,7 +3,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmailEntity } from './email.entity';
 import { GmailService } from './gmail.service';
-import { MicrosoftMailService } from './microsoft-mail.service';
 
 @Injectable()
 export class EmailsService {
@@ -11,7 +10,6 @@ export class EmailsService {
     @InjectRepository(EmailEntity)
     private readonly repo: Repository<EmailEntity>,
     private readonly gmail: GmailService,
-    private readonly microsoftMail: MicrosoftMailService,
   ) {}
 
   async listForUser(
@@ -19,13 +17,11 @@ export class EmailsService {
     options: { filter?: string; search?: string; limit?: number } = {},
   ) {
     console.log('[EmailsService] listForUser called with userId:', userId);
-
-    // Try Gmail first
-    const gmailToken = await this.gmail.getAccessTokenForUser(userId);
-    console.log('[EmailsService] Gmail accessToken:', gmailToken ? 'YES' : 'NO');
-    if (gmailToken) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    console.log('[EmailsService] accessToken retrieved:', accessToken ? 'YES' : 'NO');
+    if (accessToken) {
       try {
-        const emails = await this.gmail.listEmails(gmailToken, {
+        const emails = await this.gmail.listEmails(accessToken, {
           maxResults: options.limit,
           filter: options.filter,
           search: options.search,
@@ -36,25 +32,7 @@ export class EmailsService {
         console.error('[EmailsService] Gmail API error:', error);
       }
     }
-
-    // Try Microsoft Graph
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    console.log('[EmailsService] Microsoft accessToken:', msToken ? 'YES' : 'NO');
-    if (msToken) {
-      try {
-        const emails = await this.microsoftMail.listEmails(msToken, {
-          maxResults: options.limit,
-          filter: options.filter,
-          search: options.search,
-        });
-        console.log('[EmailsService] Microsoft returned', emails.length, 'emails');
-        return emails;
-      } catch (error) {
-        console.error('[EmailsService] Microsoft Graph API error:', error);
-      }
-    }
-
-    // No provider linked — fall back to seed data
+    // No Gmail linked — fall back to seed data
     console.log('[EmailsService] Falling back to seed data');
     await this.seedIfEmpty();
     const qb = this.repo.createQueryBuilder('email');
@@ -82,55 +60,28 @@ export class EmailsService {
 
   async getForUser(userId: string, emailId: string) {
     console.log('[EmailsService] getForUser called with emailId:', emailId);
-
-    // Try Gmail
-    const gmailToken = await this.gmail.getAccessTokenForUser(userId);
-    if (gmailToken) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
       try {
-        const email = await this.gmail.getMessage(gmailToken, emailId);
+        const email = await this.gmail.getMessage(accessToken, emailId);
         console.log('[EmailsService] Gmail getMessage returned:', email ? 'YES' : 'NO');
         return email;
       } catch (error) {
         console.error('[EmailsService] Gmail getMessage error:', error);
+        // Gmail fetch failed; fall through to DB
       }
     }
-
-    // Try Microsoft Graph
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    if (msToken) {
-      try {
-        const email = await this.microsoftMail.getMessage(msToken, emailId);
-        console.log('[EmailsService] Microsoft getMessage returned:', email ? 'YES' : 'NO');
-        return email;
-      } catch (error) {
-        console.error('[EmailsService] Microsoft getMessage error:', error);
-      }
-    }
-
     return this.repo.findOne({ where: { id: emailId } });
   }
 
   async setReadState(userId: string, emailId: string, isRead: boolean) {
     console.log('[EmailsService] setReadState called with emailId:', emailId, 'isRead:', isRead);
-
-    // Try Gmail
-    const gmailToken = await this.gmail.getAccessTokenForUser(userId);
-    if (gmailToken) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
       if (isRead) {
-        await this.gmail.markAsRead(gmailToken, emailId);
+        await this.gmail.markAsRead(accessToken, emailId);
       } else {
-        await this.gmail.markAsUnread(gmailToken, emailId);
-      }
-      return { ok: true };
-    }
-
-    // Try Microsoft Graph
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    if (msToken) {
-      if (isRead) {
-        await this.microsoftMail.markAsRead(msToken, emailId);
-      } else {
-        await this.microsoftMail.markAsUnread(msToken, emailId);
+        await this.gmail.markAsUnread(accessToken, emailId);
       }
       return { ok: true };
     }
