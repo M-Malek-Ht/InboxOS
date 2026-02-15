@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/components/AuthContext";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import Dashboard from "./pages/Dashboard";
 import MarketingPage from "./pages/Index";
 import InboxPage from "./pages/InboxPage";
@@ -71,6 +72,7 @@ const App = () => (
           </AuthProvider>
         </BrowserRouter>
         <Analytics />
+        <SpeedInsights />
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>
