@@ -42,11 +42,12 @@ export const api = {
     const qs = new URLSearchParams();
     if (params?.filter) qs.set('filter', params.filter);
     if (params?.search) qs.set('search', params.search);
-    if (params?.limit) qs.set('limit', String(params.limit));
+    qs.set('limit', String(params?.limit ?? 40));
 
-    const path = qs.toString() ? `/emails?${qs.toString()}` : '/emails';
+    const path = `/emails?${qs.toString()}`;
     const list = await http.get<any[]>(path);
-    return { data: list.map(mapEmail) };
+    const mapped = list.map(mapEmail);
+    return { data: mapped, total: mapped.length };
   },
 
   getEmail: async (id: string) => {

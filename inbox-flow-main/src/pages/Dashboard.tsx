@@ -10,7 +10,7 @@ import { Inbox, CheckSquare, Calendar, AlertCircle, ArrowRight, Mail, Clock } fr
 import { motion } from 'framer-motion';
 
 export default function Dashboard() {
-  const { data: emailsData, isLoading: emailsLoading } = useEmails({ limit: 5 });
+  const { data: emailsData, isLoading: emailsLoading } = useEmails({ limit: 40 });
   const { data: tasks, isLoading: tasksLoading } = useTasks();
   const today = new Date();
   const { data: events, isLoading: eventsLoading } = useEvents({
