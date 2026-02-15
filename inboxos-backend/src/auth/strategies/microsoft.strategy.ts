@@ -14,14 +14,22 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
       clientID: configService.get<string>('MICROSOFT_CLIENT_ID'),
       clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET'),
       callbackURL: `${configService.get<string>('APP_URL')}/auth/microsoft/callback`,
-      scope: ['user.read', 'openid', 'email', 'profile'],
+      scope: [
+        'user.read',
+        'openid',
+        'email',
+        'profile',
+        'Mail.Read',
+        'Mail.ReadWrite',
+        'offline_access',
+      ],
       tenant: 'common', // Allows both personal and work/school accounts
     });
   }
 
   async validate(
     accessToken: string,
-    _refreshToken: string | undefined,
+    refreshToken: string | undefined,
     profile: {
       id: string;
       displayName?: string;
@@ -48,6 +56,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
       email,
       'microsoft',
       profile.id,
+      refreshToken,
     );
     done(null, user);
   }

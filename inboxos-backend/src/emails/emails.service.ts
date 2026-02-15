@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { EmailEntity } from './email.entity';
 import { GmailService } from './gmail.service';
+import { MicrosoftMailService } from './microsoft-mail.service';
 
 @Injectable()
 export class EmailsService {
@@ -10,6 +11,7 @@ export class EmailsService {
     @InjectRepository(EmailEntity)
     private readonly repo: Repository<EmailEntity>,
     private readonly gmail: GmailService,
+    private readonly microsoftMail: MicrosoftMailService,
   ) {}
 
   async listForUser(
@@ -32,7 +34,25 @@ export class EmailsService {
         console.error('[EmailsService] Gmail API error:', error);
       }
     }
-    // No Gmail linked — fall back to seed data
+
+    // Try Microsoft Graph
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    console.log('[EmailsService] Microsoft accessToken:', msToken ? 'YES' : 'NO');
+    if (msToken) {
+      try {
+        const emails = await this.microsoftMail.listEmails(msToken, {
+          maxResults: options.limit,
+          filter: options.filter,
+          search: options.search,
+        });
+        console.log('[EmailsService] Microsoft returned', emails.length, 'emails');
+        return emails;
+      } catch (error) {
+        console.error('[EmailsService] Microsoft Graph API error:', error);
+      }
+    }
+
+    // No provider linked — fall back to seed data
     console.log('[EmailsService] Falling back to seed data');
     await this.seedIfEmpty();
     const qb = this.repo.createQueryBuilder('email');
@@ -68,9 +88,22 @@ export class EmailsService {
         return email;
       } catch (error) {
         console.error('[EmailsService] Gmail getMessage error:', error);
-        // Gmail fetch failed; fall through to DB
+        // Gmail fetch failed; fall through
       }
     }
+
+    // Try Microsoft Graph
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      try {
+        const email = await this.microsoftMail.getMessage(msToken, emailId);
+        console.log('[EmailsService] Microsoft getMessage returned:', email ? 'YES' : 'NO');
+        return email;
+      } catch (error) {
+        console.error('[EmailsService] Microsoft getMessage error:', error);
+      }
+    }
+
     return this.repo.findOne({ where: { id: emailId } });
   }
 
@@ -82,6 +115,17 @@ export class EmailsService {
         await this.gmail.markAsRead(accessToken, emailId);
       } else {
         await this.gmail.markAsUnread(accessToken, emailId);
+      }
+      return { ok: true };
+    }
+
+    // Try Microsoft Graph
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      if (isRead) {
+        await this.microsoftMail.markAsRead(msToken, emailId);
+      } else {
+        await this.microsoftMail.markAsUnread(msToken, emailId);
       }
       return { ok: true };
     }
