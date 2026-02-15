@@ -64,12 +64,15 @@ res.cookie('accessToken', token, {
   @UseGuards(MicrosoftCallbackGuard)
   async microsoftCallback(@Request() req: any, @Response() res: any) {
     const token = this.authService.generateToken(req.user);
+    const isProd = process.env.NODE_ENV === 'production';
     res.cookie('accessToken', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
-      maxAge: 60 * 60 * 1000,
-    });
+    httpOnly: true,
+    sameSite: isProd ? 'none' : 'lax',
+    secure: isProd,
+    path: '/',
+    maxAge: 60 * 60 * 1000,
+  });
+
     res.redirect(process.env.FRONTEND_URL || 'http://localhost:8080');
   }
 
