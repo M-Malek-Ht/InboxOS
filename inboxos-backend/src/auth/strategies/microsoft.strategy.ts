@@ -15,6 +15,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
       clientSecret: configService.get<string>('MICROSOFT_CLIENT_SECRET'),
       callbackURL: `${configService.get<string>('APP_URL')}/auth/microsoft/callback`,
       scope: ['openid', 'profile', 'email', 'User.Read', 'Mail.Read', 'offline_access'],
+      authorizationParams: { prompt: 'consent' },
       tenant: 'common', // Allows both personal and work/school accounts
     });
   }
