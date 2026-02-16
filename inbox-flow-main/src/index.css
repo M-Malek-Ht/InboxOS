@@ -199,45 +199,50 @@
     @apply bg-muted animate-pulse rounded;
   }
   
-  /* Category badge variants */
+  /* Category badge variants — 12% bg in light, 20% bg in dark for contrast */
   .category-badge {
+    --badge-alpha: 0.12;
     @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full;
   }
-  
+
+  :is(.dark) .category-badge {
+    --badge-alpha: 0.20;
+  }
+
   .category-meetings {
-    background-color: hsl(var(--category-meetings) / 0.12);
+    background-color: hsl(var(--category-meetings) / var(--badge-alpha));
     color: hsl(var(--category-meetings));
   }
 
   .category-work {
-    background-color: hsl(var(--category-work) / 0.12);
+    background-color: hsl(var(--category-work) / var(--badge-alpha));
     color: hsl(var(--category-work));
   }
 
   .category-personal {
-    background-color: hsl(var(--category-personal) / 0.12);
+    background-color: hsl(var(--category-personal) / var(--badge-alpha));
     color: hsl(var(--category-personal));
   }
 
   .category-bills {
-    background-color: hsl(var(--category-bills) / 0.12);
+    background-color: hsl(var(--category-bills) / var(--badge-alpha));
     color: hsl(var(--category-bills));
   }
 
   .category-newsletters {
-    background-color: hsl(var(--category-newsletters) / 0.12);
+    background-color: hsl(var(--category-newsletters) / var(--badge-alpha));
     color: hsl(var(--category-newsletters));
   }
 
   .category-support {
-    background-color: hsl(var(--category-support) / 0.12);
+    background-color: hsl(var(--category-support) / var(--badge-alpha));
     color: hsl(var(--category-support));
   }
 
   .category-other {
     @apply bg-muted text-muted-foreground;
   }
-  
+
   /* Priority indicator */
   .priority-high {
     color: hsl(var(--priority-high));
@@ -251,19 +256,19 @@
     color: hsl(var(--priority-low));
   }
 
-  /* Status badges */
+  /* Status badges — same adaptive alpha */
   .status-backlog {
-    background-color: hsl(var(--status-backlog) / 0.12);
+    background-color: hsl(var(--status-backlog) / var(--badge-alpha, 0.12));
     color: hsl(var(--status-backlog));
   }
 
   .status-progress {
-    background-color: hsl(var(--status-progress) / 0.12);
+    background-color: hsl(var(--status-progress) / var(--badge-alpha, 0.12));
     color: hsl(var(--status-progress));
   }
 
   .status-done {
-    background-color: hsl(var(--status-done) / 0.12);
+    background-color: hsl(var(--status-done) / var(--badge-alpha, 0.12));
     color: hsl(var(--status-done));
   }
   

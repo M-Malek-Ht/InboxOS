@@ -9,6 +9,7 @@ import {
   Command,
 } from 'lucide-react';
 import { useTheme } from '@/components/ThemeProvider';
+import { useModKey } from '@/lib/hooks/useOS';
 import { cn } from '@/lib/utils';
 
 interface TopBarProps {
@@ -28,6 +29,7 @@ const pageTitles: Record<string, string> = {
 export function TopBar({ onCommandPalette, onSearch }: TopBarProps) {
   const location = useLocation();
   const { theme, setTheme, resolvedTheme } = useTheme();
+  const modKey = useModKey();
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
@@ -99,7 +101,7 @@ export function TopBar({ onCommandPalette, onSearch }: TopBarProps) {
         >
           <Command className="h-4 w-4" />
           <span className="hidden sm:inline">Command</span>
-          <kbd className="kbd">⌘K</kbd>
+          <kbd className="kbd">{modKey}K</kbd>
         </Button>
 
         <Button

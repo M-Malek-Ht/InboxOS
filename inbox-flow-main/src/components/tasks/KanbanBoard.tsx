@@ -199,7 +199,7 @@ function KanbanColumn({ status, tasks, onStatusChange, onDelete }: KanbanColumnP
   return (
     <div
       ref={setNodeRef}
-      className="w-72 flex-shrink-0 flex flex-col bg-muted/30 rounded-xl p-3"
+      className="w-72 flex-shrink-0 flex flex-col bg-muted/50 border border-border/60 rounded-xl p-3"
     >
       <div className="flex items-center gap-2 mb-3 px-1">
         {statusIcon[status]}

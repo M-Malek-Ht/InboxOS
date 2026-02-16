@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { RefreshCw, Moon, Sun, Monitor } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
+import { useModKey } from '@/lib/hooks/useOS';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const resetData = useResetDemoData();
+  const modKey = useModKey();
 
   const handleReset = async () => {
     await resetData.mutateAsync();
@@ -66,7 +68,7 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div className="flex justify-between"><span>Command palette</span><kbd className="kbd">⌘K</kbd></div>
+            <div className="flex justify-between"><span>Command palette</span><kbd className="kbd">{modKey}K</kbd></div>
             <div className="flex justify-between"><span>Search</span><kbd className="kbd">/</kbd></div>
             <div className="flex justify-between"><span>Navigate up</span><kbd className="kbd">K</kbd></div>
             <div className="flex justify-between"><span>Navigate down</span><kbd className="kbd">J</kbd></div>

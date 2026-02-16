@@ -154,8 +154,9 @@ export function AppSidebar() {
       <Button
         variant="ghost"
         size="icon"
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-16 h-6 w-6 rounded-full border bg-background shadow-sm hover:bg-accent"
+        className="absolute -right-3 top-16 z-10 h-6 w-6 rounded-full border bg-background shadow-sm hover:bg-accent"
       >
         {collapsed ? (
           <ChevronRight className="h-3 w-3" />

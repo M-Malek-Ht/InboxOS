@@ -191,8 +191,8 @@ const Index = () => {
               <Card className="relative overflow-hidden border-border/60 bg-card/80 shadow-xl">
                 <div className="flex items-center gap-2 border-b border-border/60 px-5 py-3 text-xs text-muted-foreground">
                   <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-primary/60" />
-                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-priority-med/70" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-status-done/70" />
                   <span className="ml-2">InboxOS demo workspace</span>
                 </div>
                 <div className="grid gap-0 lg:grid-cols-[210px_1fr]">

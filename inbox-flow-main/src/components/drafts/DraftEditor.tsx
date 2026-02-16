@@ -191,7 +191,7 @@ export function DraftEditor({ email, onClose }: DraftEditorProps) {
         ) : drafts && drafts.length > 0 ? (
           <>
             {/* Version Navigation */}
-            <div className="p-3 border-b border-border flex items-center justify-between bg-muted/30">
+            <div className="p-3 border-b border-border flex items-center justify-between bg-muted/50">
               <Button
                 variant="ghost"
                 size="sm"
