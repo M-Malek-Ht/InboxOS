@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EmailEntity } from './email.entity';
+import { EmailInsightEntity } from './email-insight.entity';
 import { GmailService } from './gmail.service';
 import { MicrosoftMailService } from './microsoft-mail.service';
 
@@ -10,6 +11,8 @@ export class EmailsService {
   constructor(
     @InjectRepository(EmailEntity)
     private readonly repo: Repository<EmailEntity>,
+    @InjectRepository(EmailInsightEntity)
+    private readonly insightsRepo: Repository<EmailInsightEntity>,
     private readonly gmail: GmailService,
     private readonly microsoftMail: MicrosoftMailService,
   ) {}
@@ -29,7 +32,7 @@ export class EmailsService {
           search: options.search,
         });
         console.log('[EmailsService] Gmail returned', emails.length, 'emails');
-        return emails;
+        return this.attachInsights(userId, emails);
       } catch (error) {
         console.error('[EmailsService] Gmail API error:', error);
       }
@@ -46,7 +49,7 @@ export class EmailsService {
           search: options.search,
         });
         console.log('[EmailsService] Microsoft returned', emails.length, 'emails');
-        return emails;
+        return this.attachInsights(userId, emails);
       } catch (error) {
         console.error('[EmailsService] Microsoft Graph API error:', error);
       }
@@ -75,7 +78,8 @@ export class EmailsService {
     qb.orderBy('email.receivedAt', 'DESC');
     if (options.limit) qb.take(options.limit);
 
-    return qb.getMany();
+    const emails = await qb.getMany();
+    return this.attachInsights(userId, emails);
   }
 
   async getForUser(userId: string, emailId: string) {
@@ -85,7 +89,7 @@ export class EmailsService {
       try {
         const email = await this.gmail.getMessage(accessToken, emailId);
         console.log('[EmailsService] Gmail getMessage returned:', email ? 'YES' : 'NO');
-        return email;
+        return this.attachInsight(userId, email);
       } catch (error) {
         console.error('[EmailsService] Gmail getMessage error:', error);
         // Gmail fetch failed; fall through
@@ -98,13 +102,14 @@ export class EmailsService {
       try {
         const email = await this.microsoftMail.getMessage(msToken, emailId);
         console.log('[EmailsService] Microsoft getMessage returned:', email ? 'YES' : 'NO');
-        return email;
+        return this.attachInsight(userId, email);
       } catch (error) {
         console.error('[EmailsService] Microsoft getMessage error:', error);
       }
     }
 
-    return this.repo.findOne({ where: { id: emailId } });
+    const email = await this.repo.findOne({ where: { id: emailId } });
+    return this.attachInsight(userId, email);
   }
 
   async setReadState(userId: string, emailId: string, isRead: boolean) {
@@ -132,6 +137,51 @@ export class EmailsService {
 
     await this.repo.update({ id: emailId }, { isRead });
     return this.repo.findOne({ where: { id: emailId } });
+  }
+
+  private async attachInsights<T extends { id: string }>(userId: string, emails: T[]) {
+    if (!emails.length) return emails;
+
+    const ids = Array.from(new Set(emails.map((email) => email.id).filter(Boolean)));
+    const insights = await this.insightsRepo.find({
+      where: { userId, emailId: In(ids) },
+    });
+    const byEmailId = new Map(insights.map((insight) => [insight.emailId, insight]));
+
+    return emails.map((email) => {
+      const insight = byEmailId.get(email.id);
+      if (!insight) return email;
+
+      return {
+        ...email,
+        category: insight.category,
+        priorityScore: insight.priorityScore,
+        needsReply: insight.needsReply,
+        tags: insight.tags,
+        summary: insight.summary,
+      };
+    });
+  }
+
+  private async attachInsight<T extends { id: string } | null>(
+    userId: string,
+    email: T,
+  ) {
+    if (!email) return email;
+
+    const insight = await this.insightsRepo.findOne({
+      where: { userId, emailId: email.id },
+    });
+    if (!insight) return email;
+
+    return {
+      ...email,
+      category: insight.category,
+      priorityScore: insight.priorityScore,
+      needsReply: insight.needsReply,
+      tags: insight.tags,
+      summary: insight.summary,
+    };
   }
 
   private async seedIfEmpty() {

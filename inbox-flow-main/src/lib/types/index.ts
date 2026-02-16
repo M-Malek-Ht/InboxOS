@@ -91,6 +91,9 @@ export interface CreateDraftRequest {
   tone: Tone;
   length: Length;
   instruction?: string;
+  emailFrom?: string;
+  emailSubject?: string;
+  emailBody?: string;
 }
 
 export interface CreateTaskRequest {

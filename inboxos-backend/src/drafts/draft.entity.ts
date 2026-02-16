@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, Index } from 'typeorm';
-import { EmailEntity } from '../emails/email.entity';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('drafts')
 export class DraftEntity {
@@ -7,12 +6,8 @@ export class DraftEntity {
   id: string;
 
   @Index()
-  @Column()
+  @Column({ type: 'text' })
   emailId: string;
-
-  @ManyToOne(() => EmailEntity, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'emailId' })
-  email: EmailEntity;
 
   @Column({ type: 'text' })
   content: string;

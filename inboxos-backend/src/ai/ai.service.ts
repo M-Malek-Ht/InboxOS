@@ -19,11 +19,17 @@ export interface GenerateDraftOptions {
 @Injectable()
 export class AiService {
   private client: Anthropic;
+  private models: string[];
 
   constructor(private configService: ConfigService) {
     this.client = new Anthropic({
       apiKey: this.configService.get<string>('ANTHROPIC_API_KEY'),
     });
+    const configuredModel =
+      this.configService.get<string>('ANTHROPIC_MODEL') ??
+      'claude-sonnet-4-20250514';
+    // Keep a fallback so keys without access to the primary model can still work.
+    this.models = Array.from(new Set([configuredModel, 'claude-3-5-sonnet-latest']));
   }
 
   async classifyEmail(email: {
@@ -31,13 +37,8 @@ export class AiService {
     subject: string;
     body: string;
   }): Promise<ClassifyResult> {
-    const message = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
-      messages: [
-        {
-          role: 'user',
-          content: `Analyze the following email and return a JSON object with these fields:
+    const message = await this.createUserMessage(
+      `Analyze the following email and return a JSON object with these fields:
 - "category": one of "Meetings", "Work", "Personal", "Bills", "Newsletters", "Support", "Other"
 - "priorityScore": integer 0-100 (100 = most urgent)
 - "needsReply": boolean (true if the sender expects a response)
@@ -50,9 +51,8 @@ From: ${email.from}
 Subject: ${email.subject}
 Body:
 ${email.body}`,
-        },
-      ],
-    });
+      1024,
+    );
 
     const text =
       message.content[0].type === 'text' ? message.content[0].text : '';
@@ -107,12 +107,47 @@ ${email.body}
 
 Write ONLY the reply body text. Do not include "Subject:", "To:", greeting headers, or email metadata. Start directly with the greeting (e.g. "Hi [Name],").`;
 
-    const message = await this.client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2048,
-      messages: [{ role: 'user', content: prompt }],
-    });
+    const message = await this.createUserMessage(prompt, 2048);
 
     return message.content[0].type === 'text' ? message.content[0].text : '';
+  }
+
+  private async createUserMessage(content: string, maxTokens: number) {
+    let lastError: any = null;
+
+    for (const model of this.models) {
+      try {
+        return await this.client.messages.create({
+          model,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content }],
+        });
+      } catch (error: any) {
+        lastError = error;
+        if (!this.isModelAccessError(error)) break;
+      }
+    }
+
+    throw new Error(`Anthropic request failed: ${this.getErrorMessage(lastError)}`);
+  }
+
+  private isModelAccessError(error: any): boolean {
+    const msg = this.getErrorMessage(error).toLowerCase();
+    return msg.includes('model') && (
+      msg.includes('not found') ||
+      msg.includes('not available') ||
+      msg.includes('permission') ||
+      msg.includes('access')
+    );
+  }
+
+  private getErrorMessage(error: any): string {
+    if (!error) return 'unknown error';
+    return (
+      error?.error?.message ??
+      error?.response?.data?.error?.message ??
+      error?.message ??
+      String(error)
+    );
   }
 }

@@ -21,4 +21,17 @@ export class CreateDraftDto {
   @IsOptional()
   @IsIn(['draft', 'sent'])
   status?: 'draft' | 'sent';
+
+  // Email context for AI generation (needed for external emails from Gmail/Microsoft)
+  @IsOptional()
+  @IsString()
+  emailFrom?: string;
+
+  @IsOptional()
+  @IsString()
+  emailSubject?: string;
+
+  @IsOptional()
+  @IsString()
+  emailBody?: string;
 }

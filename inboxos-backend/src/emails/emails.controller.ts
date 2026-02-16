@@ -50,6 +50,8 @@ export class EmailsController {
     if (!email) throw new NotFoundException('Email not found');
 
     const jobId = await this.runner.enqueue('classify', {
+      userId: req.user.id,
+      emailId: id,
       from: email.from,
       subject: email.subject,
       body: email.body ?? '',

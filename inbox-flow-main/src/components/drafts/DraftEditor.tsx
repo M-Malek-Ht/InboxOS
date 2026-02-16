@@ -58,21 +58,30 @@ export function DraftEditor({ email, onClose }: DraftEditorProps) {
       refetch();
       setJobId(null);
     } else if (job?.status === 'failed') {
-      toast.error('Draft generation failed');
+      toast.error(job.error ? `Draft generation failed: ${job.error}` : 'Draft generation failed');
       setJobId(null);
     }
-  }, [job?.status, refetch]);
+  }, [job?.status, job?.error, refetch]);
 
   const handleGenerate = async () => {
-    const result = await generateDraft.mutateAsync({
-      emailId: email.id,
-      request: {
-        tone: selectedTone,
-        length: selectedLength,
-        instruction: instruction || undefined,
-      },
-    });
-    setJobId(result.jobId);
+    try {
+      const result = await generateDraft.mutateAsync({
+        emailId: email.id,
+        request: {
+          tone: selectedTone,
+          length: selectedLength,
+          instruction: instruction || undefined,
+          // Send email context so backend can generate drafts for external emails
+          emailFrom: email.fromName,
+          emailSubject: email.subject,
+          emailBody: email.bodyText,
+        },
+      });
+      setJobId(result.jobId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to start draft generation';
+      toast.error(message);
+    }
   };
 
   const selectedDraft = drafts?.find(d => d.version === selectedVersion);

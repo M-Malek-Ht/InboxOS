@@ -3,6 +3,7 @@ import { Email } from '@/lib/types';
 import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
+import { useQueryClient } from '@tanstack/react-query';
 import { CategoryBadge, PriorityIndicator, JobStatus } from '@/components/ui/badges';
 import { EmailDetailSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ interface EmailDetailPanelProps {
 }
 
 export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }: EmailDetailPanelProps) {
+  const queryClient = useQueryClient();
   const [classifyJobId, setClassifyJobId] = useState<string | null>(null);
   const [extractJobId, setExtractJobId] = useState<string | null>(null);
 
@@ -45,13 +47,32 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
   // Handle classify job completion
   useEffect(() => {
     if (classifyJob?.status === 'done') {
+      if (email?.id && classifyJob.result) {
+        const result = classifyJob.result as Record<string, unknown>;
+        queryClient.setQueryData(['email', email.id], (old: any) =>
+          old ? { ...old, ...result } : old,
+        );
+        queryClient.setQueriesData({ queryKey: ['emails'] }, (old: any) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: old.data.map((item: any) =>
+              item.id === email.id ? { ...item, ...result } : item,
+            ),
+          };
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+      if (email?.id) {
+        queryClient.invalidateQueries({ queryKey: ['email', email.id] });
+      }
       toast.success('Email classified successfully');
       setClassifyJobId(null);
     } else if (classifyJob?.status === 'failed') {
-      toast.error('Classification failed');
+      toast.error(classifyJob.error ? `Classification failed: ${classifyJob.error}` : 'Classification failed');
       setClassifyJobId(null);
     }
-  }, [classifyJob?.status]);
+  }, [classifyJob?.status, classifyJob?.result, classifyJob?.error, email?.id, queryClient]);
 
   // Handle extract dates job completion
   useEffect(() => {

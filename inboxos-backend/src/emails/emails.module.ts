@@ -6,12 +6,13 @@ import { EmailsService } from './emails.service';
 import { GmailService } from './gmail.service';
 import { MicrosoftMailService } from './microsoft-mail.service';
 import { EmailEntity } from './email.entity';
+import { EmailInsightEntity } from './email-insight.entity';
 import { Account } from '../auth/account.entity';
 import { JobsModule } from '../jobs/jobs.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([EmailEntity, Account]),
+    TypeOrmModule.forFeature([EmailEntity, EmailInsightEntity, Account]),
     ConfigModule,
     JobsModule,
   ],

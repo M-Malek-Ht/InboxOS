@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { DraftEntity } from './draft.entity';
@@ -14,10 +14,9 @@ export class DraftsService {
     private readonly emailsRepo: Repository<EmailEntity>,
   ) {}
 
-  async getEmailOrFail(emailId: string): Promise<EmailEntity> {
-    const email = await this.emailsRepo.findOne({ where: { id: emailId } });
-    if (!email) throw new NotFoundException('Email not found');
-    return email;
+  /** Returns null instead of throwing when the email isn't in the local DB. */
+  async findEmailOrNull(emailId: string): Promise<EmailEntity | null> {
+    return this.emailsRepo.findOne({ where: { id: emailId } });
   }
 
   listByEmail(emailId: string) {
@@ -27,9 +26,8 @@ export class DraftsService {
     });
   }
 
-  async createForEmail(emailId: string, dto: CreateDraftDto) {
-    await this.getEmailOrFail(emailId);
-
+  /** Save a draft with content already provided (manual edit / paste). */
+  async createDirectDraft(emailId: string, dto: CreateDraftDto) {
     const latestDraft = await this.draftsRepo.findOne({
       where: { emailId },
       order: { version: 'DESC' },

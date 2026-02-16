@@ -1,5 +1,23 @@
 import { http } from './http';
 
+/** Strip HTML tags and decode common entities to get readable plain text. */
+function stripHtml(html: string): string {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function mapEmail(e: any) {
   // Parse "Name <email@example.com>" or just "email@example.com"
   const fromRaw = e.from ?? 'Unknown';
@@ -28,12 +46,13 @@ function mapEmail(e: any) {
     bodyText: e.body ?? '', // Frontend expects bodyText
     receivedAt: e.receivedAt,
 
-    // fields expected by UI (defaults for now)
+    // AI/classification fields (if not classified yet, keep safe defaults)
     isRead: e.isRead ?? false,
-    needsReply: false,
-    priorityScore: 50,
-    category: undefined,
-    tags: [], // Frontend expects tags array
+    needsReply: e.needsReply ?? false,
+    priorityScore: typeof e.priorityScore === 'number' ? e.priorityScore : undefined,
+    category: e.category,
+    tags: Array.isArray(e.tags) ? e.tags : [],
+    summary: e.summary ?? undefined,
   };
 }
 

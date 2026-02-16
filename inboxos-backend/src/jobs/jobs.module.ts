@@ -6,9 +6,10 @@ import { JobsController } from './jobs.controller';
 import { JobRunnerService } from './job-runner.service';
 import { AiModule } from '../ai/ai.module';
 import { DraftEntity } from '../drafts/draft.entity';
+import { EmailInsightEntity } from '../emails/email-insight.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([JobEntity, DraftEntity]), AiModule],
+  imports: [TypeOrmModule.forFeature([JobEntity, DraftEntity, EmailInsightEntity]), AiModule],
   controllers: [JobsController],
   providers: [JobsService, JobRunnerService],
   exports: [JobsService, JobRunnerService],

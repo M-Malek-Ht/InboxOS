@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { JobsService } from './jobs.service';
 import { AiService } from '../ai/ai.service';
 import { DraftEntity } from '../drafts/draft.entity';
+import { EmailInsightEntity } from '../emails/email-insight.entity';
 
 /**
  * Central async job runner.
@@ -22,6 +23,8 @@ export class JobRunnerService {
     private readonly ai: AiService,
     @InjectRepository(DraftEntity)
     private readonly draftsRepo: Repository<DraftEntity>,
+    @InjectRepository(EmailInsightEntity)
+    private readonly insightsRepo: Repository<EmailInsightEntity>,
   ) {}
 
   /**
@@ -75,8 +78,25 @@ export class JobRunnerService {
   // ── handlers ────────────────────────────────────────
 
   private async handleClassify(payload: Record<string, any>) {
-    const { from, subject, body } = payload;
-    return this.ai.classifyEmail({ from, subject, body });
+    const { userId, emailId, from, subject, body } = payload;
+    const result = await this.ai.classifyEmail({ from, subject, body });
+
+    if (userId && emailId) {
+      await this.insightsRepo.upsert(
+        {
+          userId,
+          emailId,
+          category: result.category,
+          priorityScore: result.priorityScore,
+          needsReply: result.needsReply,
+          tags: result.tags,
+          summary: result.summary,
+        },
+        ['userId', 'emailId'],
+      );
+    }
+
+    return result;
   }
 
   private async handleDraft(payload: Record<string, any>) {
