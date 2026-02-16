@@ -8,6 +8,7 @@ import { EventsModule } from './events/events.module';
 import { DraftsModule } from './drafts/drafts.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -41,6 +42,8 @@ import { AuthModule } from './auth/auth.module';
     UsersModule,
 
     AuthModule,
+
+    AiModule,
   ],
   controllers: [HealthController],
 })

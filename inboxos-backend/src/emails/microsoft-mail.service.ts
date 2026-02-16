@@ -53,7 +53,7 @@ export class MicrosoftMailService {
     accessToken: string,
     options: { maxResults?: number; filter?: string; search?: string } = {},
   ): Promise<ParsedEmail[]> {
-    const top = options.maxResults ?? 20;
+    const top = options.maxResults ?? 40;
     const params = new URLSearchParams();
     params.set('$top', String(top));
     params.set('$orderby', 'receivedDateTime desc');

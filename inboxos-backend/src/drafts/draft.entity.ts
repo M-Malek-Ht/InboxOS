@@ -17,6 +17,18 @@ export class DraftEntity {
   @Column({ type: 'text' })
   content: string;
 
+  @Column({ default: 1 })
+  version: number;
+
+  @Column({ default: 'Professional' })
+  tone: string;
+
+  @Column({ default: 'Medium' })
+  length: string;
+
+  @Column({ type: 'text', nullable: true })
+  instruction: string | null;
+
   @Column({ default: 'draft' })
   status: 'draft' | 'sent';
 

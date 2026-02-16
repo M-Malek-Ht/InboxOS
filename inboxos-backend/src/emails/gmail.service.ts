@@ -61,7 +61,7 @@ export class GmailService {
     options: { maxResults?: number; filter?: string; search?: string } = {},
   ): Promise<ParsedEmail[]> {
     const params = new URLSearchParams();
-    params.set('maxResults', String(options.maxResults ?? 20));
+    params.set('maxResults', String(options.maxResults ?? 40));
     params.append('labelIds', 'INBOX');
 
     const qParts: string[] = [];
