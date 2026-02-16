@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { RefreshCw, Moon, Sun, Monitor } from 'lucide-react';
+import { PageTransition } from '@/components/PageTransition';
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
@@ -17,6 +18,7 @@ export default function SettingsPage() {
   };
 
   return (
+    <PageTransition>
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
@@ -73,5 +75,6 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
     </div>
+    </PageTransition>
   );
 }

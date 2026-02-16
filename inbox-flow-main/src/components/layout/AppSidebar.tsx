@@ -61,7 +61,7 @@ export function AppSidebar() {
       <nav className="flex-1 py-4 overflow-y-auto scrollbar-hide">
         <ul className="space-y-1 px-2">
           {navItems.map((item) => (
-            <li key={item.path}>
+            <motion.li key={item.path} whileHover={{ x: 2 }} transition={{ duration: 0.15 }}>
               <NavLink
                 to={item.path}
                 end={item.path === '/'}
@@ -87,7 +87,7 @@ export function AppSidebar() {
                   )}
                 </AnimatePresence>
               </NavLink>
-            </li>
+            </motion.li>
           ))}
         </ul>
       </nav>

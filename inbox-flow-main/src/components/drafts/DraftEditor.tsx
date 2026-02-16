@@ -233,7 +233,7 @@ export function DraftEditor({ email, onClose }: DraftEditorProps) {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="prose prose-sm dark:prose-invert max-w-none"
+                    className="prose prose-sm prose-neutral dark:prose-invert max-w-none"
                   >
                     {selectedDraft.content.split('\n').map((line, i) => (
                       <p key={i} className={cn(!line && 'h-4')}>

@@ -3,11 +3,13 @@ import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PageTransition } from '@/components/PageTransition';
 
 export default function WorkflowsPage() {
   const [view, setView] = useState<'kanban' | 'list'>('kanban');
 
   return (
+    <PageTransition>
     <div className="h-[calc(100vh-3.5rem)] flex flex-col">
       <div className="p-4 border-b border-border flex items-center justify-between">
         <h2 className="text-lg font-semibold">Tasks</h2>
@@ -36,5 +38,6 @@ export default function WorkflowsPage() {
         <KanbanBoard view={view} />
       </div>
     </div>
+    </PageTransition>
   );
 }

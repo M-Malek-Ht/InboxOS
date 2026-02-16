@@ -193,7 +193,7 @@ function MonthGrid({ currentDate, events, onDayClick, onEventClick }: MonthGridP
               'min-h-24 p-2 border border-border rounded-lg cursor-pointer transition-colors',
               'hover:border-muted-foreground/30',
               !isCurrentMonth && 'bg-muted/30 text-muted-foreground',
-              isToday(day) && 'border-primary bg-primary/5'
+              isToday(day) && 'border-primary bg-primary/10'
             )}
           >
             <div className={cn(
@@ -254,7 +254,7 @@ function WeekGrid({ currentDate, events, onDayClick, onEventClick }: WeekGridPro
             key={day.toISOString()}
             className={cn(
               'p-2 text-center border-l border-border',
-              isToday(day) && 'bg-primary/5'
+              isToday(day) && 'bg-primary/10'
             )}
           >
             <div className="text-sm font-medium">{format(day, 'EEE')}</div>
@@ -283,7 +283,7 @@ function WeekGrid({ currentDate, events, onDayClick, onEventClick }: WeekGridPro
                   onClick={() => onDayClick(day)}
                   className={cn(
                     'border-l border-border p-1 cursor-pointer hover:bg-muted/30',
-                    isToday(day) && 'bg-primary/5'
+                    isToday(day) && 'bg-primary/10'
                   )}
                 >
                   {hourEvents.map(event => (

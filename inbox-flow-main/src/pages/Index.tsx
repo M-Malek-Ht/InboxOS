@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PageTransition } from "@/components/PageTransition";
 import {
   ArrowRight,
   Sparkles,
@@ -14,6 +15,7 @@ import {
   LineChart,
   CheckCircle2,
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 const fontImports = `
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
@@ -21,6 +23,16 @@ const fontImports = `
 
 const headingFont = '"Space Grotesk", "Sora", ui-sans-serif';
 const bodyFont = '"Manrope", "Sora", ui-sans-serif';
+
+const stagger = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.08 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: [0.4, 0, 0.2, 1] } },
+};
 
 const features = [
   {
@@ -78,6 +90,7 @@ const stats = [
 
 const Index = () => {
   return (
+    <PageTransition>
     <div className="min-h-screen bg-background text-foreground" style={{ fontFamily: bodyFont }}>
       <style>{fontImports}</style>
 
@@ -128,7 +141,12 @@ const Index = () => {
 
         <main className="relative z-10">
           <section className="container grid gap-10 py-20 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-            <div className="space-y-6 animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+              className="space-y-6"
+            >
               <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
                 Frontend only demo
               </Badge>
@@ -163,62 +181,74 @@ const Index = () => {
                   Built for fast triage
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            <Card className="relative overflow-hidden border-border/60 bg-card/80 shadow-xl animate-fade-in">
-              <div className="flex items-center gap-2 border-b border-border/60 px-5 py-3 text-xs text-muted-foreground">
-                <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
-                <span className="h-2.5 w-2.5 rounded-full bg-primary/60" />
-                <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
-                <span className="ml-2">InboxOS demo workspace</span>
-              </div>
-              <div className="grid gap-0 lg:grid-cols-[210px_1fr]">
-                <div className="border-r border-border/60 bg-muted/40 p-4">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Priority
-                  </div>
-                  <div className="mt-3 space-y-2 text-sm">
-                    {["New funding deck", "Q2 hiring plan", "Customer escalation", "Design review"].map((item) => (
-                      <div key={item} className="rounded-md bg-background px-3 py-2 shadow-sm">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.5, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
+            >
+              <Card className="relative overflow-hidden border-border/60 bg-card/80 shadow-xl">
+                <div className="flex items-center gap-2 border-b border-border/60 px-5 py-3 text-xs text-muted-foreground">
+                  <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-primary/60" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-muted-foreground/40" />
+                  <span className="ml-2">InboxOS demo workspace</span>
                 </div>
-                <div className="p-5 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-semibold">Project Phoenix rollout</div>
-                      <div className="text-xs text-muted-foreground">From Ava Harper - 10:12 AM</div>
-                    </div>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                      Needs reply
-                    </Badge>
-                  </div>
-                  <div className="rounded-lg border border-border/60 bg-background p-4 text-sm text-muted-foreground">
-                    Hi team, can we finalize the rollout checklist? I need confirmation on
-                    owner assignments and the launch schedule.
-                  </div>
-                  <div className="grid gap-2">
+                <div className="grid gap-0 lg:grid-cols-[210px_1fr]">
+                  <div className="border-r border-border/60 bg-muted/40 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Next actions
+                      Priority
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                      Assign owners and due dates
+                    <div className="mt-3 space-y-2 text-sm">
+                      {["New funding deck", "Q2 hiring plan", "Customer escalation", "Design review"].map((item) => (
+                        <div key={item} className="rounded-md bg-background px-3 py-2 shadow-sm">
+                          {item}
+                        </div>
+                      ))}
                     </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="h-2 w-2 rounded-full bg-primary" />
-                      Draft reply with schedule
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-sm font-semibold">Project Phoenix rollout</div>
+                        <div className="text-xs text-muted-foreground">From Ava Harper - 10:12 AM</div>
+                      </div>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        Needs reply
+                      </Badge>
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-background p-4 text-sm text-muted-foreground">
+                      Hi team, can we finalize the rollout checklist? I need confirmation on
+                      owner assignments and the launch schedule.
+                    </div>
+                    <div className="grid gap-2">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Next actions
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="h-2 w-2 rounded-full bg-primary" />
+                        Assign owners and due dates
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <span className="h-2 w-2 rounded-full bg-primary" />
+                        Draft reply with schedule
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </motion.div>
           </section>
 
           <section id="features" className="container py-16">
-            <div className="flex flex-col gap-3 max-w-2xl">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.4 }}
+              className="flex flex-col gap-3 max-w-2xl"
+            >
               <Badge variant="outline" className="w-fit border-primary/40 text-primary">
                 Features
               </Badge>
@@ -228,25 +258,35 @@ const Index = () => {
               <p className="text-muted-foreground">
                 Designed for the way teams actually triage, respond, and convert email into progress.
               </p>
-            </div>
-            <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-              {features.map((feature, index) => (
-                <Card
-                  key={feature.title}
-                  className="border-border/60 bg-card/80 p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md animate-fade-in"
-                  style={{ animationDelay: `${index * 80}ms` }}
-                >
-                  <feature.icon className="h-5 w-5 text-primary" />
-                  <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
-                </Card>
+            </motion.div>
+            <motion.div
+              variants={stagger}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, margin: "-50px" }}
+              className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3"
+            >
+              {features.map((feature) => (
+                <motion.div key={feature.title} variants={fadeUp}>
+                  <Card className="border-border/60 bg-card/80 p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                    <feature.icon className="h-5 w-5 text-primary" />
+                    <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
+                    <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
+                  </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </section>
 
           <section id="demo" className="container py-16">
             <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
-              <div className="space-y-5">
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.4 }}
+                className="space-y-5"
+              >
                 <Badge variant="outline" className="w-fit border-primary/40 text-primary">
                   Demo inbox
                 </Badge>
@@ -271,38 +311,51 @@ const Index = () => {
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-              </div>
-              <Card className="border-border/60 bg-gradient-to-br from-background to-muted/60 p-6 shadow-lg">
-                <div className="grid gap-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold">Inbox health</div>
-                    <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                      Updated
-                    </Badge>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+              >
+                <Card className="border-border/60 bg-gradient-to-br from-background to-muted/60 p-6 shadow-lg">
+                  <div className="grid gap-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-semibold">Inbox health</div>
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                        Updated
+                      </Badge>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {[
+                        { label: "Unread", value: "14" },
+                        { label: "Needs reply", value: "6" },
+                        { label: "In progress", value: "9" },
+                      ].map((item) => (
+                        <div key={item.label} className="rounded-lg border border-border/60 bg-background p-4">
+                          <div className="text-xs text-muted-foreground">{item.label}</div>
+                          <div className="text-xl font-semibold">{item.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-lg border border-border/60 bg-background p-4 text-sm text-muted-foreground">
+                      Next up: Review escalation notes, sync with product, and send scheduling replies.
+                    </div>
                   </div>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    {[
-                      { label: "Unread", value: "14" },
-                      { label: "Needs reply", value: "6" },
-                      { label: "In progress", value: "9" },
-                    ].map((item) => (
-                      <div key={item.label} className="rounded-lg border border-border/60 bg-background p-4">
-                        <div className="text-xs text-muted-foreground">{item.label}</div>
-                        <div className="text-xl font-semibold">{item.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="rounded-lg border border-border/60 bg-background p-4 text-sm text-muted-foreground">
-                    Next up: Review escalation notes, sync with product, and send scheduling replies.
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
             </div>
           </section>
 
           <section id="workflow" className="container py-16">
             <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-              <div className="space-y-5">
+              <motion.div
+                initial={{ opacity: 0, x: -16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.4 }}
+                className="space-y-5"
+              >
                 <Badge variant="outline" className="w-fit border-primary/40 text-primary">
                   Workflow
                 </Badge>
@@ -325,56 +378,70 @@ const Index = () => {
                     </div>
                   ))}
                 </div>
-              </div>
-              <Card className="border-border/60 bg-card/80 p-6 shadow-lg">
-                <div className="grid gap-4">
-                  <div className="flex items-center gap-3">
-                    <LineChart className="h-5 w-5 text-primary" />
-                    <div>
-                      <div className="text-sm font-semibold">Workflow clarity</div>
-                      <div className="text-xs text-muted-foreground">Keep work visible and on track.</div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, x: 16 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ duration: 0.4, delay: 0.1 }}
+              >
+                <Card className="border-border/60 bg-card/80 p-6 shadow-lg">
+                  <div className="grid gap-4">
+                    <div className="flex items-center gap-3">
+                      <LineChart className="h-5 w-5 text-primary" />
+                      <div>
+                        <div className="text-sm font-semibold">Workflow clarity</div>
+                        <div className="text-xs text-muted-foreground">Keep work visible and on track.</div>
+                      </div>
+                    </div>
+                    <div className="grid gap-3">
+                      {[
+                        "Capture every request in one place",
+                        "Assign owners with quick action buttons",
+                        "Move cards as status changes",
+                      ].map((item) => (
+                        <div key={item} className="flex items-center gap-2 text-sm">
+                          <span className="h-2 w-2 rounded-full bg-primary" />
+                          {item}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  <div className="grid gap-3">
-                    {[
-                      "Capture every request in one place",
-                      "Assign owners with quick action buttons",
-                      "Move cards as status changes",
-                    ].map((item) => (
-                      <div key={item} className="flex items-center gap-2 text-sm">
-                        <span className="h-2 w-2 rounded-full bg-primary" />
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
             </div>
           </section>
 
           <section className="container pb-20">
-            <Card className="border-border/60 bg-primary text-primary-foreground p-10 shadow-xl">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                <div className="space-y-2">
-                  <h2 className="text-3xl font-semibold" style={{ fontFamily: headingFont }}>
-                    Ready to explore the InboxOS demo?
-                  </h2>
-                  <p className="text-primary-foreground/80">
-                    Login to the frontend demo and see how the workflow feels end to end.
-                  </p>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-50px" }}
+              transition={{ duration: 0.4 }}
+            >
+              <Card className="border-border/60 bg-primary text-primary-foreground p-10 shadow-xl">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="space-y-2">
+                    <h2 className="text-3xl font-semibold" style={{ fontFamily: headingFont }}>
+                      Ready to explore the InboxOS demo?
+                    </h2>
+                    <p className="text-primary-foreground/80">
+                      Login to the frontend demo and see how the workflow feels end to end.
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-3">
+                    <Button variant="secondary" size="lg" asChild>
+                      <Link to="/login">Login</Link>
+                    </Button>
+                    <Button variant="ghost" size="lg" asChild>
+                      <a href="#features" className="text-primary-foreground">
+                        Review features
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button variant="secondary" size="lg" asChild>
-                    <Link to="/login">Login</Link>
-                  </Button>
-                  <Button variant="ghost" size="lg" asChild>
-                    <a href="#features" className="text-primary-foreground">
-                      Review features
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </Card>
+              </Card>
+            </motion.div>
           </section>
         </main>
 
@@ -398,6 +465,7 @@ const Index = () => {
         </footer>
       </div>
     </div>
+    </PageTransition>
   );
 };
 

@@ -165,10 +165,11 @@ function EmailListItem({ email, isSelected, onClick }: EmailListItemProps) {
     <button
       onClick={onClick}
       className={cn(
-        'w-full text-left p-4 transition-colors duration-150',
-        'hover:bg-accent/50',
-        isSelected && 'bg-accent',
-        !email.isRead && 'bg-primary/5'
+        'w-full text-left p-4 transition-all duration-150',
+        'border-l-2 border-l-transparent',
+        'hover:bg-accent/50 hover:border-l-primary/40',
+        isSelected && 'bg-accent border-l-primary',
+        !email.isRead && 'bg-primary/10'
       )}
     >
       <div className="flex items-start gap-3">
@@ -209,7 +210,7 @@ function EmailListItem({ email, isSelected, onClick }: EmailListItemProps) {
               <PriorityIndicator priority="High" score={email.priorityScore} />
             )}
             {email.needsReply && (
-              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+              <span className="text-xs text-priority-med font-medium">
                 Needs Reply
               </span>
             )}

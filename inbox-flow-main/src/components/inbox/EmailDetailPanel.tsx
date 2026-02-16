@@ -171,7 +171,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
             />
           )}
           {email.needsReply && (
-            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-priority-med/15 text-priority-med">
               Needs Reply
             </span>
           )}
@@ -246,7 +246,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
 
       {/* Email Body */}
       <div className="flex-1 overflow-y-auto p-6">
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
           {email.bodyText.split('\n').map((paragraph, i) => (
             <p key={i} className={cn(!paragraph && 'h-4')}>
               {paragraph}

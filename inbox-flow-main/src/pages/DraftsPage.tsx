@@ -3,12 +3,14 @@ import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { EmptyDrafts } from '@/components/ui/empty-states';
 import { FileText } from 'lucide-react';
+import { PageTransition } from '@/components/PageTransition';
 
 export default function DraftsPage() {
   const { data: emails } = useEmails({ limit: 50 });
   const emailsWithDrafts = emails?.data.filter(e => e.id) || [];
 
   return (
+    <PageTransition>
     <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Drafts</h1>
@@ -25,6 +27,7 @@ export default function DraftsPage() {
         )}
       </div>
     </div>
+    </PageTransition>
   );
 }
 

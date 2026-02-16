@@ -192,8 +192,8 @@ function KanbanColumn({ status, tasks, onStatusChange, onDelete }: KanbanColumnP
 
   const statusIcon = {
     'Backlog': <Circle className="h-4 w-4 text-muted-foreground" />,
-    'In Progress': <Clock className="h-4 w-4 text-blue-500" />,
-    'Done': <CheckCircle2 className="h-4 w-4 text-green-500" />,
+    'In Progress': <Clock className="h-4 w-4 text-status-progress" />,
+    'Done': <CheckCircle2 className="h-4 w-4 text-status-done" />,
   };
 
   return (
@@ -338,9 +338,9 @@ function TaskListItem({ task, onStatusChange, onDelete }: TaskListItemProps) {
         className="flex-shrink-0"
       >
         {task.status === 'Done' ? (
-          <CheckCircle2 className="h-5 w-5 text-green-500" />
+          <CheckCircle2 className="h-5 w-5 text-status-done" />
         ) : task.status === 'In Progress' ? (
-          <Clock className="h-5 w-5 text-blue-500" />
+          <Clock className="h-5 w-5 text-status-progress" />
         ) : (
           <Circle className="h-5 w-5 text-muted-foreground" />
         )}

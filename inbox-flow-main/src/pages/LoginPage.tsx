@@ -1,7 +1,9 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import { Button } from '@/components/ui/button';
+import { PageTransition } from '@/components/PageTransition';
 import { Sparkles } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const GoogleIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5 flex-shrink-0">
@@ -21,6 +23,16 @@ const MicrosoftIcon = () => (
   </svg>
 );
 
+const stagger = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.15 } },
+};
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 12 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.4, 0, 0.2, 1] } },
+};
+
 export default function LoginPage() {
   const { user, isLoading, login } = useAuth();
 
@@ -28,42 +40,53 @@ export default function LoginPage() {
   if (user) return <Navigate to="/" replace />;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-sm mx-auto px-6">
-        {/* Logo */}
-        <div className="flex flex-col items-center gap-3 mb-10">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-sm">
-            <Sparkles className="h-7 w-7 text-primary-foreground" />
-          </div>
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-foreground">InboxOS</h1>
-            <p className="text-sm text-muted-foreground mt-1">Sign in to continue</p>
-          </div>
-        </div>
+    <PageTransition>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <motion.div
+          variants={stagger}
+          initial="hidden"
+          animate="show"
+          className="w-full max-w-sm mx-auto px-6"
+        >
+          {/* Logo */}
+          <motion.div variants={fadeUp} className="flex flex-col items-center gap-3 mb-10">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-sm">
+              <Sparkles className="h-7 w-7 text-primary-foreground" />
+            </div>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold text-foreground">InboxOS</h1>
+              <p className="text-sm text-muted-foreground mt-1">Sign in to continue</p>
+            </div>
+          </motion.div>
 
-        {/* Buttons */}
-        <div className="flex flex-col gap-3">
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => login('google')}
-            className="w-full gap-3 h-12 text-sm font-medium"
-          >
-            <GoogleIcon />
-            Continue with Google
-          </Button>
+          {/* Buttons */}
+          <motion.div variants={fadeUp} className="flex flex-col gap-3">
+            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => login('google')}
+                className="w-full gap-3 h-12 text-sm font-medium"
+              >
+                <GoogleIcon />
+                Continue with Google
+              </Button>
+            </motion.div>
 
-          <Button
-            variant="outline"
-            size="lg"
-            onClick={() => login('microsoft')}
-            className="w-full gap-3 h-12 text-sm font-medium"
-          >
-            <MicrosoftIcon />
-            Continue with Microsoft
-          </Button>
-        </div>
+            <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }}>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => login('microsoft')}
+                className="w-full gap-3 h-12 text-sm font-medium"
+              >
+                <MicrosoftIcon />
+                Continue with Microsoft
+              </Button>
+            </motion.div>
+          </motion.div>
+        </motion.div>
       </div>
-    </div>
+    </PageTransition>
   );
 }

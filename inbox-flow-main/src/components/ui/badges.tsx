@@ -75,10 +75,10 @@ interface JobStatusProps {
 
 export function JobStatus({ status, className }: JobStatusProps) {
   const statusConfig = {
-    queued: { label: 'Queued', className: 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400' },
-    processing: { label: 'Processing', className: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 animate-pulse-subtle' },
-    done: { label: 'Done', className: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' },
-    failed: { label: 'Failed', className: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' },
+    queued: { label: 'Queued', className: 'bg-muted text-muted-foreground' },
+    processing: { label: 'Processing', className: 'bg-primary/10 text-primary animate-pulse-subtle' },
+    done: { label: 'Done', className: 'bg-status-done/15 text-status-done' },
+    failed: { label: 'Failed', className: 'bg-destructive/10 text-destructive' },
   };
 
   const config = statusConfig[status];

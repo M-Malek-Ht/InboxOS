@@ -5,6 +5,7 @@ import { EmailDetailPanel } from '@/components/inbox/EmailDetailPanel';
 import { DraftEditor } from '@/components/drafts/DraftEditor';
 import { useEmail } from '@/lib/api/hooks';
 import { AnimatePresence } from 'framer-motion';
+import { PageTransition } from '@/components/PageTransition';
 
 export default function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -23,6 +24,7 @@ export default function InboxPage() {
   }, []);
 
   return (
+    <PageTransition>
     <div className="h-[calc(100vh-3.5rem)] flex">
       {/* Email List */}
       <div className="w-96 flex-shrink-0 border-r border-border overflow-hidden">
@@ -50,5 +52,6 @@ export default function InboxPage() {
         </AnimatePresence>
       </div>
     </div>
+    </PageTransition>
   );
 }

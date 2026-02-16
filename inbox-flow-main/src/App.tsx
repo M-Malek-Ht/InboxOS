@@ -16,10 +16,18 @@ import CalendarPage from "./pages/CalendarPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
+import { Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
 
 const AuthLoading = () => (
   <div className="min-h-screen flex items-center justify-center bg-background">
-    <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center animate-pulse" />
+    <motion.div
+      animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
+      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+      className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center"
+    >
+      <Sparkles className="h-5 w-5 text-primary-foreground" />
+    </motion.div>
   </div>
 );
 
