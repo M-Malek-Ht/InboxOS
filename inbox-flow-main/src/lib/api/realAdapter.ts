@@ -72,11 +72,19 @@ export const api = {
   updateEvent: (id: string, request: any) => http.patch<any>(`/events/${id}`, request),
   deleteEvent: (id: string) => http.delete<any>(`/events/${id}`),
 
-  // Still mock / not implemented yet:
+  // Email actions
   markEmailRead: async (id: string, isRead: boolean) =>
     http.patch<any>(`/emails/${id}`, { isRead }),
-  classifyEmail: async (_emailId: string) => ({ jobId: 'not-implemented' }),
+
+  // AI-powered endpoints (async job queue)
+  classifyEmail: async (emailId: string) =>
+    http.post<{ jobId: string }>(`/emails/${emailId}/classify`, {}),
+
+  // Job polling
+  getJob: async (jobId: string) =>
+    http.get<{ id: string; type: string; status: string; result: any; error: string | null }>(`/jobs/${jobId}`),
+
+  // Not yet implemented
   extractDates: async (_emailId: string) => ({ jobId: 'not-implemented' }),
-  getJob: async (jobId: string) => ({ id: jobId, status: 'done', result: null }),
   resetDemoData: async () => ({ ok: true }),
 };

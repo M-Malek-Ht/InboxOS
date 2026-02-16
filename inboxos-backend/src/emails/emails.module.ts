@@ -7,13 +7,13 @@ import { GmailService } from './gmail.service';
 import { MicrosoftMailService } from './microsoft-mail.service';
 import { EmailEntity } from './email.entity';
 import { Account } from '../auth/account.entity';
-import { AiModule } from '../ai/ai.module';
+import { JobsModule } from '../jobs/jobs.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([EmailEntity, Account]),
     ConfigModule,
-    AiModule,
+    JobsModule,
   ],
   controllers: [EmailsController],
   providers: [EmailsService, GmailService, MicrosoftMailService],

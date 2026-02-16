@@ -1,13 +1,13 @@
 import { Body, Controller, Get, Param, Post, NotFoundException, Patch, Query, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EmailsService } from './emails.service';
-import { AiService } from '../ai/ai.service';
+import { JobRunnerService } from '../jobs/job-runner.service';
 
 @Controller('emails')
 export class EmailsController {
   constructor(
     private readonly emails: EmailsService,
-    private readonly ai: AiService,
+    private readonly runner: JobRunnerService,
   ) {}
 
   @Get()
@@ -49,10 +49,12 @@ export class EmailsController {
     const email = await this.emails.getForUser(req.user.id, id);
     if (!email) throw new NotFoundException('Email not found');
 
-    return this.ai.classifyEmail({
+    const jobId = await this.runner.enqueue('classify', {
       from: email.from,
       subject: email.subject,
       body: email.body ?? '',
     });
+
+    return { jobId };
   }
 }
