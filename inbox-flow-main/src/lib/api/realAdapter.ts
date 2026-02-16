@@ -43,7 +43,7 @@ function mapEmail(e: any) {
     subject: e.subject ?? '(no subject)',
     snippet: e.snippet ?? '',
     body: e.body ?? '',
-    bodyText: e.body ?? '', // Frontend expects bodyText
+    bodyText: stripHtml(e.body ?? ''), // Strip HTML tags for display
     receivedAt: e.receivedAt,
 
     // AI/classification fields (if not classified yet, keep safe defaults)
