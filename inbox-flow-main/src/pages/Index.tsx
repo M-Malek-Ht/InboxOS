@@ -99,7 +99,7 @@ const Index = () => {
         <div className="pointer-events-none absolute -top-24 right-0 h-80 w-80 rounded-full bg-primary/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 left-0 h-72 w-72 rounded-full bg-muted/50 blur-3xl" />
 
-        <header className="relative z-10 border-b border-border/60 bg-background/70 backdrop-blur">
+        <header className="relative z-10 border-b border-border bg-background/70 backdrop-blur">
           <div className="container flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
@@ -147,7 +147,7 @@ const Index = () => {
               transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
               className="space-y-6"
             >
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/40">
                 Frontend only demo
               </Badge>
               <h1
@@ -188,15 +188,15 @@ const Index = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.5, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
             >
-              <Card className="relative overflow-hidden border-border/60 bg-card/80 shadow-xl">
-                <div className="flex items-center gap-2 border-b border-border/60 px-5 py-3 text-xs text-muted-foreground">
+              <Card className="relative overflow-hidden border-border bg-card/80 shadow-xl">
+                <div className="flex items-center gap-2 border-b border-border px-5 py-3 text-xs text-muted-foreground">
                   <span className="h-2.5 w-2.5 rounded-full bg-destructive/70" />
                   <span className="h-2.5 w-2.5 rounded-full bg-priority-med/70" />
                   <span className="h-2.5 w-2.5 rounded-full bg-status-done/70" />
                   <span className="ml-2">InboxOS demo workspace</span>
                 </div>
                 <div className="grid gap-0 lg:grid-cols-[210px_1fr]">
-                  <div className="border-r border-border/60 bg-muted/40 p-4">
+                  <div className="border-r border-border bg-muted/40 p-4">
                     <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                       Priority
                     </div>
@@ -214,11 +214,11 @@ const Index = () => {
                         <div className="text-sm font-semibold">Project Phoenix rollout</div>
                         <div className="text-xs text-muted-foreground">From Ava Harper - 10:12 AM</div>
                       </div>
-                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/40">
                         Needs reply
                       </Badge>
                     </div>
-                    <div className="rounded-lg border border-border/60 bg-background p-4 text-sm text-muted-foreground">
+                    <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
                       Hi team, can we finalize the rollout checklist? I need confirmation on
                       owner assignments and the launch schedule.
                     </div>
@@ -268,7 +268,7 @@ const Index = () => {
             >
               {features.map((feature) => (
                 <motion.div key={feature.title} variants={fadeUp}>
-                  <Card className="border-border/60 bg-card/80 p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
+                  <Card className="border-border bg-card/80 p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
                     <feature.icon className="h-5 w-5 text-primary" />
                     <h3 className="mt-4 text-lg font-semibold">{feature.title}</h3>
                     <p className="mt-2 text-sm text-muted-foreground">{feature.description}</p>
@@ -299,7 +299,7 @@ const Index = () => {
                 </p>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   {stats.map((stat) => (
-                    <div key={stat.label} className="flex items-center justify-between border-b border-border/50 pb-2">
+                    <div key={stat.label} className="flex items-center justify-between border-b border-border pb-2">
                       <span>{stat.label}</span>
                       <span className="text-foreground font-medium">{stat.value}</span>
                     </div>
@@ -318,11 +318,11 @@ const Index = () => {
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                <Card className="border-border/60 bg-gradient-to-br from-background to-muted/60 p-6 shadow-lg">
+                <Card className="border-border bg-gradient-to-br from-background to-muted/60 p-6 shadow-lg">
                   <div className="grid gap-4">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-semibold">Inbox health</div>
-                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                      <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/40">
                         Updated
                       </Badge>
                     </div>
@@ -332,13 +332,13 @@ const Index = () => {
                         { label: "Needs reply", value: "6" },
                         { label: "In progress", value: "9" },
                       ].map((item) => (
-                        <div key={item.label} className="rounded-lg border border-border/60 bg-background p-4">
+                        <div key={item.label} className="rounded-lg border border-border bg-background p-4">
                           <div className="text-xs text-muted-foreground">{item.label}</div>
                           <div className="text-xl font-semibold">{item.value}</div>
                         </div>
                       ))}
                     </div>
-                    <div className="rounded-lg border border-border/60 bg-background p-4 text-sm text-muted-foreground">
+                    <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
                       Next up: Review escalation notes, sync with product, and send scheduling replies.
                     </div>
                   </div>
@@ -385,7 +385,7 @@ const Index = () => {
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ duration: 0.4, delay: 0.1 }}
               >
-                <Card className="border-border/60 bg-card/80 p-6 shadow-lg">
+                <Card className="border-border bg-card/80 p-6 shadow-lg">
                   <div className="grid gap-4">
                     <div className="flex items-center gap-3">
                       <LineChart className="h-5 w-5 text-primary" />
@@ -419,7 +419,7 @@ const Index = () => {
               viewport={{ once: true, margin: "-50px" }}
               transition={{ duration: 0.4 }}
             >
-              <Card className="border-border/60 bg-primary text-primary-foreground p-10 shadow-xl">
+              <Card className="border-border bg-primary text-primary-foreground p-10 shadow-xl">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="space-y-2">
                     <h2 className="text-3xl font-semibold" style={{ fontFamily: headingFont }}>
@@ -445,7 +445,7 @@ const Index = () => {
           </section>
         </main>
 
-        <footer className="border-t border-border/60 bg-background/80">
+        <footer className="border-t border-border bg-background/80">
           <div className="container flex flex-col gap-4 py-8 text-sm text-muted-foreground md:flex-row md:items-center md:justify-between">
             <div>
               InboxOS - Inbox Flow frontend demo. Built for our product concept.
