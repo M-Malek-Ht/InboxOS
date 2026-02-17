@@ -59,4 +59,36 @@ export class EmailsController {
 
     return { jobId };
   }
+
+  /**
+   * Classify all unclassified emails in one call.
+   * Accepts { emailIds: string[] } — only those without existing insights
+   * will be processed.
+   */
+  @Post('classify-batch')
+  @UseGuards(JwtAuthGuard)
+  async classifyBatch(
+    @Body() body: { emailIds: string[] },
+    @Request() req: any,
+  ) {
+    const ids = body.emailIds ?? [];
+    const unclassified = await this.emails.getUnclassifiedIds(req.user.id, ids);
+
+    const jobIds: string[] = [];
+    for (const emailId of unclassified) {
+      const email = await this.emails.getForUser(req.user.id, emailId);
+      if (!email) continue;
+
+      const jobId = await this.runner.enqueue('classify', {
+        userId: req.user.id,
+        emailId,
+        from: email.from,
+        subject: email.subject,
+        body: email.body ?? '',
+      });
+      jobIds.push(jobId);
+    }
+
+    return { jobIds, count: jobIds.length };
+  }
 }

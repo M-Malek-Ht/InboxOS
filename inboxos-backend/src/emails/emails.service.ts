@@ -184,6 +184,23 @@ export class EmailsService {
     };
   }
 
+  /**
+   * Returns email IDs that have no classification insight for the given user.
+   */
+  async getUnclassifiedIds(
+    userId: string,
+    emailIds: string[],
+  ): Promise<string[]> {
+    if (!emailIds.length) return [];
+
+    const existing = await this.insightsRepo.find({
+      select: ['emailId'],
+      where: { userId, emailId: In(emailIds) },
+    });
+    const classified = new Set(existing.map((i) => i.emailId));
+    return emailIds.filter((id) => !classified.has(id));
+  }
+
   private async seedIfEmpty() {
     const count = await this.repo.count();
     if (count > 0) return;

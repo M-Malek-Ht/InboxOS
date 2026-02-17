@@ -3,14 +3,17 @@ import { Email } from '@/lib/types';
 import { InboxList } from '@/components/inbox/InboxList';
 import { EmailDetailPanel } from '@/components/inbox/EmailDetailPanel';
 import { DraftEditor } from '@/components/drafts/DraftEditor';
-import { useEmail } from '@/lib/api/hooks';
+import { useEmail, useEmails, useAutoClassify } from '@/lib/api/hooks';
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from '@/components/PageTransition';
 
 export default function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDraftEditor, setShowDraftEditor] = useState(false);
-  
+
+  const { data: emailsData } = useEmails({ limit: 40 });
+  useAutoClassify(emailsData?.data);
+
   const { data: selectedEmail, isLoading } = useEmail(selectedId);
 
   const handleSelect = useCallback((email: Email) => {

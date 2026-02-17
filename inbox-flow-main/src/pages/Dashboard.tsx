@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useEmails, useTasks, useEvents } from '@/lib/api/hooks';
+import { useEmails, useTasks, useEvents, useAutoClassify } from '@/lib/api/hooks';
 import { format, startOfDay, endOfDay, addDays } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,6 +22,7 @@ const fadeUp = {
 
 export default function Dashboard() {
   const { data: emailsData, isLoading: emailsLoading } = useEmails({ limit: 40 });
+  useAutoClassify(emailsData?.data);
   const { data: tasks, isLoading: tasksLoading } = useTasks();
   const today = new Date();
   const { data: events, isLoading: eventsLoading } = useEvents({

@@ -99,6 +99,9 @@ export const api = {
   classifyEmail: async (emailId: string) =>
     http.post<{ jobId: string }>(`/emails/${emailId}/classify`, {}),
 
+  classifyBatch: async (emailIds: string[]) =>
+    http.post<{ jobIds: string[]; count: number }>('/emails/classify-batch', { emailIds }),
+
   // Job polling
   getJob: async (jobId: string) =>
     http.get<{ id: string; type: string; status: string; result: any; error: string | null }>(`/jobs/${jobId}`),

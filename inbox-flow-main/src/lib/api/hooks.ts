@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRef, useEffect } from 'react';
 import {
   Email, Draft, Task, CalendarEvent, Job,
   EmailsQueryParams, CreateDraftRequest, CreateTaskRequest,
@@ -220,6 +221,45 @@ export function useExtractDates() {
   return useMutation({
     mutationFn: (emailId: string) => api.extractDates(emailId),
   });
+}
+
+// Auto-classify: fires once when emails load, classifies any without a category
+export function useAutoClassify(emails: Email[] | undefined) {
+  const queryClient = useQueryClient();
+  const sentRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!emails?.length) return;
+
+    const unclassified = emails
+      .filter((e) => !e.category && !sentRef.current.has(e.id))
+      .map((e) => e.id);
+
+    if (!unclassified.length) return;
+
+    // Mark as sent so we don't re-fire
+    unclassified.forEach((id) => sentRef.current.add(id));
+
+    api.classifyBatch(unclassified).then(({ jobIds }) => {
+      if (!jobIds.length) return;
+
+      // Poll the last job as a proxy for batch completion, then refresh
+      const lastJobId = jobIds[jobIds.length - 1];
+      const poll = setInterval(async () => {
+        try {
+          const job = await api.getJob(lastJobId);
+          if (job.status === 'done' || job.status === 'failed') {
+            clearInterval(poll);
+            queryClient.invalidateQueries({ queryKey: ['emails'] });
+          }
+        } catch {
+          clearInterval(poll);
+        }
+      }, 1500);
+    }).catch(() => {
+      // Silently fail — classification is best-effort
+    });
+  }, [emails, queryClient]);
 }
 
 // Reset demo data
