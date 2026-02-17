@@ -95,6 +95,10 @@ export const api = {
   markEmailRead: async (id: string, isRead: boolean) =>
     http.patch<any>(`/emails/${id}`, { isRead }),
 
+  // Reply
+  sendReply: async (emailId: string, body: string, draftId?: string) =>
+    http.post<{ ok: boolean; provider: string }>(`/emails/${emailId}/reply`, { body, draftId }),
+
   // AI-powered endpoints (async job queue)
   classifyEmail: async (emailId: string) =>
     http.post<{ jobId: string }>(`/emails/${emailId}/classify`, {}),

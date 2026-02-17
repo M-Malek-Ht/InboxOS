@@ -35,7 +35,7 @@ export class MicrosoftMailService {
         client_secret: this.configService.get<string>('MICROSOFT_CLIENT_SECRET')!,
         refresh_token: refreshToken,
         grant_type: 'refresh_token',
-        scope: 'Mail.Read Mail.ReadWrite offline_access',
+        scope: 'Mail.Read Mail.ReadWrite Mail.Send offline_access',
       }),
     });
 
@@ -124,6 +124,32 @@ export class MicrosoftMailService {
   async markAsUnread(accessToken: string, messageId: string): Promise<void> {
     console.log('[MicrosoftMailService] markAsUnread called with messageId:', messageId);
     await this.setReadState(accessToken, messageId, false);
+  }
+
+  // ── send ──────────────────────────────────────────
+
+  async sendReply(
+    accessToken: string,
+    messageId: string,
+    body: string,
+  ): Promise<void> {
+    const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}/reply`;
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ comment: body }),
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(
+        (error as any).error?.message ?? 'Failed to send reply via Microsoft Graph',
+      );
+    }
   }
 
   // ── internals ───────────────────────────────────────

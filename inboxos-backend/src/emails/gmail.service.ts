@@ -12,6 +12,9 @@ export interface ParsedEmail {
   body: string;
   receivedAt: Date;
   isRead: boolean;
+  threadId?: string;
+  to?: string;
+  messageIdHeader?: string;
 }
 
 @Injectable()
@@ -109,6 +112,53 @@ export class GmailService {
     await this.setReadState(accessToken, messageId, false);
   }
 
+  // ── send ──────────────────────────────────────────
+
+  async sendReply(
+    accessToken: string,
+    params: { to: string; subject: string; body: string; threadId?: string; inReplyTo?: string },
+  ): Promise<{ id: string }> {
+    const lines = [
+      `To: ${params.to}`,
+      `Subject: ${params.subject.startsWith('Re:') ? params.subject : `Re: ${params.subject}`}`,
+      'Content-Type: text/plain; charset=UTF-8',
+    ];
+    if (params.inReplyTo) {
+      lines.push(`In-Reply-To: ${params.inReplyTo}`);
+      lines.push(`References: ${params.inReplyTo}`);
+    }
+    lines.push('', params.body);
+
+    const raw = Buffer.from(lines.join('\r\n'))
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const payload: Record<string, string> = { raw };
+    if (params.threadId) payload.threadId = params.threadId;
+
+    const res = await fetch(
+      'https://www.googleapis.com/gmail/v1/users/me/messages/send',
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      },
+    );
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error?.message ?? 'Failed to send reply via Gmail');
+    }
+
+    const data = await res.json();
+    return { id: data.id };
+  }
+
   // ── internals ───────────────────────────────────────
 
   private async fetchAndParse(accessToken: string, messageId: string): Promise<ParsedEmail> {
@@ -173,6 +223,9 @@ export class GmailService {
       body: this.extractBody(msg.payload),
       receivedAt: new Date(getHeader('date')),
       isRead,
+      threadId: msg.threadId,
+      to: getHeader('to'),
+      messageIdHeader: getHeader('message-id'),
     };
   }
 

@@ -139,6 +139,31 @@ export class EmailsService {
     return this.repo.findOne({ where: { id: emailId } });
   }
 
+  async sendReply(userId: string, emailId: string, body: string) {
+    // Try Gmail
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      const email = await this.gmail.getMessage(accessToken, emailId);
+      await this.gmail.sendReply(accessToken, {
+        to: email.from,
+        subject: email.subject,
+        body,
+        threadId: email.threadId,
+        inReplyTo: email.messageIdHeader,
+      });
+      return { ok: true, provider: 'gmail' as const };
+    }
+
+    // Try Microsoft Graph
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      await this.microsoftMail.sendReply(msToken, emailId, body);
+      return { ok: true, provider: 'microsoft' as const };
+    }
+
+    throw new Error('No email provider linked — cannot send reply');
+  }
+
   private async attachInsights<T extends { id: string }>(userId: string, emails: T[]) {
     if (!emails.length) return emails;
 

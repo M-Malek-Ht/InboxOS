@@ -21,6 +21,7 @@ export class MicrosoftStrategy extends PassportStrategy(Strategy, 'microsoft') {
         'profile',
         'Mail.Read',
         'Mail.ReadWrite',
+        'Mail.Send',
         'offline_access',
       ],
       tenant: 'common', // Allows both personal and work/school accounts

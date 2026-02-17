@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Email, Tone, Length } from '@/lib/types';
-import { useDrafts, useGenerateDraft, useJob } from '@/lib/api/hooks';
+import { useDrafts, useGenerateDraft, useJob, useSendReply } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  Send,
+  Loader2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -39,6 +41,7 @@ export function DraftEditor({ email, onClose }: DraftEditorProps) {
 
   const { data: drafts, isLoading: draftsLoading, refetch } = useDrafts(email.id);
   const generateDraft = useGenerateDraft();
+  const sendReply = useSendReply();
   const { data: job } = useJob(jobId);
 
   const latestDraft = drafts?.[0];
@@ -250,6 +253,31 @@ export function DraftEditor({ email, onClose }: DraftEditorProps) {
               <Button variant="outline" className="flex-1 gap-2" onClick={handleCopy}>
                 {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 {copied ? 'Copied!' : 'Copy Draft'}
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                disabled={!selectedDraft || sendReply.isPending}
+                onClick={async () => {
+                  if (!selectedDraft) return;
+                  try {
+                    await sendReply.mutateAsync({
+                      emailId: email.id,
+                      body: selectedDraft.content,
+                      draftId: selectedDraft.id,
+                    });
+                    toast.success('Reply sent!');
+                    onClose();
+                  } catch {
+                    toast.error('Failed to send reply');
+                  }
+                }}
+              >
+                {sendReply.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+                {sendReply.isPending ? 'Sending...' : 'Send Reply'}
               </Button>
             </div>
           </>

@@ -7,6 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { CategoryBadge, PriorityIndicator, JobStatus } from '@/components/ui/badges';
 import { EmailDetailSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
+import { ReplyComposer } from './ReplyComposer';
 import { toast } from 'sonner';
 import {
   X,
@@ -15,9 +16,10 @@ import {
   Calendar,
   FileText,
   ArrowRight,
+  Reply,
   Sparkles,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface EmailDetailPanelProps {
   email: Email | null;
@@ -30,6 +32,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
   const queryClient = useQueryClient();
   const [classifyJobId, setClassifyJobId] = useState<string | null>(null);
   const [extractJobId, setExtractJobId] = useState<string | null>(null);
+  const [showReply, setShowReply] = useState(false);
 
   const classifyEmail = useClassifyEmail();
   const createTask = useCreateTask();
@@ -38,10 +41,11 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
   const { data: classifyJob } = useJob(classifyJobId);
   const { data: extractJob } = useJob(extractJobId);
 
-  // Reset job IDs when email changes
+  // Reset state when email changes
   useEffect(() => {
     setClassifyJobId(null);
     setExtractJobId(null);
+    setShowReply(false);
   }, [email?.id]);
 
   // Handle classify job completion
@@ -234,13 +238,23 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
           Extract Dates
         </Button>
         <Button
+          variant="outline"
           size="sm"
           onClick={onGenerateDraft}
-          className="gap-2 ml-auto"
+          className="gap-2"
         >
           <FileText className="h-4 w-4" />
-          Generate Reply
+          Full Editor
           <ArrowRight className="h-4 w-4" />
+        </Button>
+        <Button
+          size="sm"
+          onClick={() => setShowReply(true)}
+          disabled={showReply}
+          className="gap-2 ml-auto"
+        >
+          <Reply className="h-4 w-4" />
+          Reply
         </Button>
       </div>
 
@@ -254,6 +268,17 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
           ))}
         </div>
       </div>
+
+      {/* Reply Composer */}
+      <AnimatePresence>
+        {showReply && (
+          <ReplyComposer
+            email={email}
+            onSent={() => setShowReply(false)}
+            onClose={() => setShowReply(false)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -43,6 +43,17 @@ export class EmailsController {
     return this.emails.setReadState(req.user.id, id, !!body.isRead);
   }
 
+  @Post(':id/reply')
+  @UseGuards(JwtAuthGuard)
+  async reply(
+    @Param('id') id: string,
+    @Body() body: { body: string; draftId?: string },
+    @Request() req: any,
+  ) {
+    const result = await this.emails.sendReply(req.user.id, id, body.body);
+    return result;
+  }
+
   @Post(':id/classify')
   @UseGuards(JwtAuthGuard)
   async classify(@Param('id') id: string, @Request() req: any) {

@@ -18,6 +18,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         'email',
         'profile',
         'https://www.googleapis.com/auth/gmail.modify', // Allows read + mark as read
+        'https://www.googleapis.com/auth/gmail.send',   // Allows sending emails
       ],
       // accessType is valid at runtime but missing from the type definitions
       accessType: 'offline',

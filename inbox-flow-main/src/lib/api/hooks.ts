@@ -77,6 +77,18 @@ export function useClassifyEmail() {
   });
 }
 
+export function useSendReply() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ emailId, body, draftId }: { emailId: string; body: string; draftId?: string }) =>
+      api.sendReply(emailId, body, draftId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    },
+  });
+}
+
 // Draft hooks
 export function useDrafts(emailId: string | null) {
   return useQuery({
