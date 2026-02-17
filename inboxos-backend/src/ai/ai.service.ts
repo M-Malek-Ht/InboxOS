@@ -117,11 +117,7 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
 
     for (const model of this.models) {
       try {
-        return await this.client.messages.create({
-          model,
-          max_tokens: maxTokens,
-          messages: [{ role: 'user', content }],
-        });
+        return await this.callWithRetry(model, content, maxTokens);
       } catch (error: any) {
         lastError = error;
         if (!this.isModelAccessError(error)) break;
@@ -129,6 +125,32 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
     }
 
     throw new Error(`Anthropic request failed: ${this.getErrorMessage(lastError)}`);
+  }
+
+  private async callWithRetry(
+    model: string,
+    content: string,
+    maxTokens: number,
+    maxRetries = 5,
+  ) {
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await this.client.messages.create({
+          model,
+          max_tokens: maxTokens,
+          messages: [{ role: 'user', content }],
+        });
+      } catch (error: any) {
+        const status = error?.status ?? error?.error?.status;
+        if (status === 429 && attempt < maxRetries) {
+          const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        throw error;
+      }
+    }
+    throw new Error('Max retries exceeded');
   }
 
   private isModelAccessError(error: any): boolean {

@@ -226,36 +226,37 @@ export function useExtractDates() {
 // Auto-classify: fires once when emails load, classifies any without a category
 export function useAutoClassify(emails: Email[] | undefined) {
   const queryClient = useQueryClient();
-  const sentRef = useRef<Set<string>>(new Set());
+  const firedRef = useRef(false);
 
   useEffect(() => {
-    if (!emails?.length) return;
+    if (!emails?.length || firedRef.current) return;
 
     const unclassified = emails
-      .filter((e) => !e.category && !sentRef.current.has(e.id))
+      .filter((e) => !e.category)
       .map((e) => e.id);
 
     if (!unclassified.length) return;
 
-    // Mark as sent so we don't re-fire
-    unclassified.forEach((id) => sentRef.current.add(id));
+    // Only fire once per mount
+    firedRef.current = true;
 
-    api.classifyBatch(unclassified).then(({ jobIds }) => {
-      if (!jobIds.length) return;
+    api.classifyBatch(unclassified).then(({ jobId }) => {
+      if (!jobId) return;
 
-      // Poll the last job as a proxy for batch completion, then refresh
-      const lastJobId = jobIds[jobIds.length - 1];
+      // Poll the single batch job; refresh periodically as emails get classified
       const poll = setInterval(async () => {
         try {
-          const job = await api.getJob(lastJobId);
+          const job = await api.getJob(jobId);
+          // Refresh on every poll so the UI updates progressively
+          queryClient.invalidateQueries({ queryKey: ['emails'] });
+
           if (job.status === 'done' || job.status === 'failed') {
             clearInterval(poll);
-            queryClient.invalidateQueries({ queryKey: ['emails'] });
           }
         } catch {
           clearInterval(poll);
         }
-      }, 1500);
+      }, 3000);
     }).catch(() => {
       // Silently fail — classification is best-effort
     });

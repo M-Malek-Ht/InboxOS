@@ -59,6 +59,9 @@ export class JobRunnerService {
         case 'classify':
           result = await this.handleClassify(payload);
           break;
+        case 'classify-batch':
+          result = await this.handleClassifyBatch(jobId, payload);
+          break;
         case 'draft':
           result = await this.handleDraft(payload);
           break;
@@ -97,6 +100,51 @@ export class JobRunnerService {
     }
 
     return result;
+  }
+
+  private async handleClassifyBatch(jobId: string, payload: Record<string, any>) {
+    const { userId, items } = payload as {
+      userId: string;
+      items: { emailId: string; from: string; subject: string; body: string }[];
+    };
+
+    let classified = 0;
+    let failed = 0;
+
+    for (const item of items) {
+      try {
+        const result = await this.ai.classifyEmail({
+          from: item.from,
+          subject: item.subject,
+          body: item.body,
+        });
+
+        await this.insightsRepo.upsert(
+          {
+            userId,
+            emailId: item.emailId,
+            category: result.category,
+            priorityScore: result.priorityScore,
+            needsReply: result.needsReply,
+            tags: result.tags,
+            summary: result.summary,
+          },
+          ['userId', 'emailId'],
+        );
+        classified++;
+        this.log.log(`Batch ${jobId}: classified ${classified}/${items.length} (${item.emailId})`);
+      } catch (err: any) {
+        failed++;
+        this.log.warn(`Batch ${jobId}: failed ${item.emailId}: ${err.message}`);
+      }
+
+      // Small delay between requests to stay within rate limits
+      if (classified + failed < items.length) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+
+    return { classified, failed, total: items.length };
   }
 
   private async handleDraft(payload: Record<string, any>) {
