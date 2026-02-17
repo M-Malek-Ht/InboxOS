@@ -264,11 +264,10 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
       <div className="flex-1 overflow-y-auto min-h-0">
         {threadMessages && threadMessages.length > 1 ? (
           <div className="divide-y divide-border">
-            {threadMessages.map((msg: any, idx: number) => {
-              const isSent = msg.fromEmail === email.fromEmail ? false : true;
+            {threadMessages.map((msg: any) => {
               // If the message's from matches the original email's from, it's from the sender
               // Otherwise it's from the current user (a sent reply)
-              const isFromSender = msg.fromEmail === email.fromEmail;
+              const isFromSender = msg.fromEmail?.toLowerCase() === email.fromEmail?.toLowerCase();
               return (
                 <div
                   key={msg.id}

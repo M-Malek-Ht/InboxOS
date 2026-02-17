@@ -42,7 +42,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
   const sendReply = useSendReply();
   const generateDraft = useGenerateDraft();
   const { data: job } = useJob(jobId);
-  const { data: drafts, refetch: refetchDrafts } = useDrafts(email.id);
+  const { refetch: refetchDrafts } = useDrafts(email.id);
 
   // Auto-focus textarea on mount
   useEffect(() => {
@@ -54,7 +54,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
-    ta.style.height = `${Math.min(ta.scrollHeight, 144)}px`; // max ~6 rows
+    ta.style.height = `${Math.min(ta.scrollHeight, 120)}px`; // max ~5 rows
   }, []);
 
   useEffect(() => {
@@ -140,7 +140,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className="border-t-2 border-primary/30 bg-muted/30 max-h-[50vh] overflow-y-auto flex-shrink-0"
+      className="border-t-2 border-primary/30 bg-muted/30 flex-shrink-0"
     >
       {/* Header */}
       <div className="px-4 pt-2 pb-1 flex items-center justify-between">
@@ -167,16 +167,16 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
           placeholder="Write your reply..."
           rows={2}
           className={cn(
-            'w-full resize-none rounded-lg border border-border bg-background px-3 py-2.5',
+            'w-full resize-none rounded-lg border border-border bg-background px-3 py-2',
             'text-sm text-foreground placeholder:text-muted-foreground',
             'focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50',
-            'transition-all duration-150',
+            'transition-all duration-150 max-h-[120px] overflow-y-auto',
           )}
         />
       </div>
 
-      {/* AI Assist Toggle */}
-      <div className="px-4 pb-1">
+      {/* Footer — AI Assist + Send on same row */}
+      <div className="px-4 py-1.5 flex items-center gap-2">
         <button
           onClick={() => setShowAiAssist(!showAiAssist)}
           className={cn(
@@ -191,86 +191,84 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
           {showAiAssist ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
         </button>
 
-        <AnimatePresence>
-          {showAiAssist && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden"
-            >
-              <div className="pt-3 pb-1 flex items-end gap-3">
-                <div className="flex-1 grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground">Tone</Label>
-                    <Select value={selectedTone} onValueChange={(v) => setSelectedTone(v as Tone)}>
-                      <SelectTrigger className="h-8 text-xs mt-0.5">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {tones.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label className="text-[11px] text-muted-foreground">Length</Label>
-                    <Select value={selectedLength} onValueChange={(v) => setSelectedLength(v as Length)}>
-                      <SelectTrigger className="h-8 text-xs mt-0.5">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {lengths.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleGenerate}
-                  disabled={!!jobId}
-                  className="gap-1.5 h-8 text-xs"
-                >
-                  <Sparkles className={cn('h-3 w-3', jobId && 'animate-spin')} />
-                  Generate
-                </Button>
-              </div>
-
-              {jobId && job && (
-                <div className="flex items-center justify-center gap-2 py-2">
-                  <JobStatus status={job.status} />
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Footer / Send */}
-      <div className="px-4 pb-2 flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">
-          {modKey}+Enter to send
+        <span className="text-[11px] text-muted-foreground ml-auto mr-2">
+          {modKey}+Enter
         </span>
         <Button
           size="sm"
           onClick={handleSend}
           disabled={!content.trim() || sendReply.isPending}
-          className="gap-2 min-w-[100px]"
+          className="gap-1.5 h-7 text-xs px-3"
         >
           {sendReply.isPending ? (
             <>
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Sending...
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Sending
             </>
           ) : (
             <>
-              <Send className="h-3.5 w-3.5" />
-              Send Reply
+              <Send className="h-3 w-3" />
+              Send
             </>
           )}
         </Button>
       </div>
+
+      {/* AI Assist Expandable */}
+      <AnimatePresence>
+        {showAiAssist && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden border-t border-border"
+          >
+            <div className="px-4 py-2 flex items-end gap-2">
+              <div className="flex-1 grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Tone</Label>
+                  <Select value={selectedTone} onValueChange={(v) => setSelectedTone(v as Tone)}>
+                    <SelectTrigger className="h-7 text-xs mt-0.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tones.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-[11px] text-muted-foreground">Length</Label>
+                  <Select value={selectedLength} onValueChange={(v) => setSelectedLength(v as Length)}>
+                    <SelectTrigger className="h-7 text-xs mt-0.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {lengths.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleGenerate}
+                disabled={!!jobId}
+                className="gap-1.5 h-7 text-xs"
+              >
+                <Sparkles className={cn('h-3 w-3', jobId && 'animate-spin')} />
+                Generate
+              </Button>
+            </div>
+
+            {jobId && job && (
+              <div className="flex items-center justify-center gap-2 py-1.5">
+                <JobStatus status={job.status as 'queued' | 'processing' | 'done' | 'failed'} />
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

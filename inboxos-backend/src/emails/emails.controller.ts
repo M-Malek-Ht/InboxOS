@@ -25,18 +25,18 @@ export class EmailsController {
     });
   }
 
+  @Get(':id/thread')
+  @UseGuards(JwtAuthGuard)
+  async getThread(@Param('id') id: string, @Request() req: any) {
+    return this.emails.getThread(req.user.id, id);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard)
   async get(@Param('id') id: string, @Request() req: any) {
     const email = await this.emails.getForUser(req.user.id, id);
     if (!email) throw new NotFoundException('Email not found');
     return email;
-  }
-
-  @Get(':id/thread')
-  @UseGuards(JwtAuthGuard)
-  async getThread(@Param('id') id: string, @Request() req: any) {
-    return this.emails.getThread(req.user.id, id);
   }
 
   @Patch(':id')
@@ -47,34 +47,6 @@ export class EmailsController {
     @Request() req: any,
   ) {
     return this.emails.setReadState(req.user.id, id, !!body.isRead);
-  }
-
-  @Post(':id/reply')
-  @UseGuards(JwtAuthGuard)
-  async reply(
-    @Param('id') id: string,
-    @Body() body: { body: string; draftId?: string },
-    @Request() req: any,
-  ) {
-    const result = await this.emails.sendReply(req.user.id, id, body.body);
-    return result;
-  }
-
-  @Post(':id/classify')
-  @UseGuards(JwtAuthGuard)
-  async classify(@Param('id') id: string, @Request() req: any) {
-    const email = await this.emails.getForUser(req.user.id, id);
-    if (!email) throw new NotFoundException('Email not found');
-
-    const jobId = await this.runner.enqueue('classify', {
-      userId: req.user.id,
-      emailId: id,
-      from: email.from,
-      subject: email.subject,
-      body: email.body ?? '',
-    });
-
-    return { jobId };
   }
 
   /**
@@ -115,5 +87,33 @@ export class EmailsController {
     });
 
     return { jobId, count: items.length };
+  }
+
+  @Post(':id/reply')
+  @UseGuards(JwtAuthGuard)
+  async reply(
+    @Param('id') id: string,
+    @Body() body: { body: string; draftId?: string },
+    @Request() req: any,
+  ) {
+    const result = await this.emails.sendReply(req.user.id, id, body.body);
+    return result;
+  }
+
+  @Post(':id/classify')
+  @UseGuards(JwtAuthGuard)
+  async classify(@Param('id') id: string, @Request() req: any) {
+    const email = await this.emails.getForUser(req.user.id, id);
+    if (!email) throw new NotFoundException('Email not found');
+
+    const jobId = await this.runner.enqueue('classify', {
+      userId: req.user.id,
+      emailId: id,
+      from: email.from,
+      subject: email.subject,
+      body: email.body ?? '',
+    });
+
+    return { jobId };
   }
 }

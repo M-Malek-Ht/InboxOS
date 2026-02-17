@@ -15,6 +15,7 @@ export interface ParsedEmail {
   threadId?: string;
   to?: string;
   messageIdHeader?: string;
+  labelIds?: string[];
 }
 
 @Injectable()
@@ -94,7 +95,25 @@ export class GmailService {
         this.fetchAndParse(accessToken, msg.id),
       ),
     );
-    return messages;
+
+    // Filter out sent-only messages (SENT label but no INBOX label)
+    const inboxMessages = messages.filter((m) => {
+      const labels = m.labelIds ?? [];
+      if (labels.includes('SENT') && !labels.includes('INBOX')) return false;
+      return true;
+    });
+
+    // Deduplicate by threadId — keep the most recent message per thread
+    const threadMap = new Map<string, ParsedEmail>();
+    for (const msg of inboxMessages) {
+      const key = msg.threadId ?? msg.id;
+      const existing = threadMap.get(key);
+      if (!existing || new Date(msg.receivedAt) > new Date(existing.receivedAt)) {
+        threadMap.set(key, msg);
+      }
+    }
+
+    return Array.from(threadMap.values());
   }
 
   async getMessage(accessToken: string, messageId: string): Promise<ParsedEmail> {
@@ -247,6 +266,7 @@ export class GmailService {
       threadId: msg.threadId,
       to: getHeader('to'),
       messageIdHeader: getHeader('message-id'),
+      labelIds,
     };
   }
 
