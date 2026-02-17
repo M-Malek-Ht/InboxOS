@@ -112,6 +112,27 @@ export class GmailService {
     await this.setReadState(accessToken, messageId, false);
   }
 
+  // ── thread ─────────────────────────────────────────
+
+  async getThread(
+    accessToken: string,
+    threadId: string,
+  ): Promise<ParsedEmail[]> {
+    const url = `https://www.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error?.message ?? 'Failed to fetch thread');
+    }
+
+    const data = await res.json();
+    const messages: any[] = data.messages ?? [];
+    return messages.map((msg) => this.parseMessage(msg));
+  }
+
   // ── send ──────────────────────────────────────────
 
   async sendReply(

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Reply,
   Sparkles,
+  Send as SendIcon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -37,7 +38,8 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
   const classifyEmail = useClassifyEmail();
   const createTask = useCreateTask();
   const extractDates = useExtractDates();
-  
+  const { data: threadMessages } = useThread(email?.id ?? null);
+
   const { data: classifyJob } = useJob(classifyJobId);
   const { data: extractJob } = useJob(extractJobId);
 
@@ -258,15 +260,65 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
         </Button>
       </div>
 
-      {/* Email Body */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
-          {email.bodyText.split('\n').map((paragraph, i) => (
-            <p key={i} className={cn(!paragraph && 'h-4')}>
-              {paragraph}
-            </p>
-          ))}
-        </div>
+      {/* Conversation Thread */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        {threadMessages && threadMessages.length > 1 ? (
+          <div className="divide-y divide-border">
+            {threadMessages.map((msg: any, idx: number) => {
+              const isSent = msg.fromEmail === email.fromEmail ? false : true;
+              // If the message's from matches the original email's from, it's from the sender
+              // Otherwise it's from the current user (a sent reply)
+              const isFromSender = msg.fromEmail === email.fromEmail;
+              return (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    'px-6 py-4',
+                    !isFromSender && 'bg-primary/[0.03]',
+                  )}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className={cn(
+                      'w-7 h-7 rounded-full flex items-center justify-center text-xs font-medium',
+                      isFromSender
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground'
+                    )}>
+                      {isFromSender ? (
+                        msg.fromName.charAt(0).toUpperCase()
+                      ) : (
+                        <SendIcon className="h-3 w-3" />
+                      )}
+                    </div>
+                    <span className="text-sm font-medium">
+                      {isFromSender ? msg.fromName : 'You'}
+                    </span>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {format(new Date(msg.receivedAt), 'MMM d, h:mm a')}
+                    </span>
+                  </div>
+                  <div className="pl-9 prose prose-sm prose-neutral dark:prose-invert max-w-none">
+                    {(msg.bodyText || '').split('\n').map((line: string, i: number) => (
+                      <p key={i} className={cn(!line && 'h-3')}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="p-6">
+            <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
+              {email.bodyText.split('\n').map((paragraph, i) => (
+                <p key={i} className={cn(!paragraph && 'h-4')}>
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Reply Composer */}
@@ -274,7 +326,10 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
         {showReply && (
           <ReplyComposer
             email={email}
-            onSent={() => setShowReply(false)}
+            onSent={() => {
+              setShowReply(false);
+              queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+            }}
             onClose={() => setShowReply(false)}
           />
         )}

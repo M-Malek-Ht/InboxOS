@@ -33,6 +33,12 @@ export class EmailsController {
     return email;
   }
 
+  @Get(':id/thread')
+  @UseGuards(JwtAuthGuard)
+  async getThread(@Param('id') id: string, @Request() req: any) {
+    return this.emails.getThread(req.user.id, id);
+  }
+
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
   async setRead(

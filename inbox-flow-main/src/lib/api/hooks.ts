@@ -34,6 +34,14 @@ export function useEmail(id: string | null) {
   });
 }
 
+export function useThread(emailId: string | null) {
+  return useQuery({
+    queryKey: ['thread', emailId] as const,
+    queryFn: () => api.getThread(emailId!),
+    enabled: !!emailId,
+  });
+}
+
 export function useMarkEmailRead() {
   const queryClient = useQueryClient();
   

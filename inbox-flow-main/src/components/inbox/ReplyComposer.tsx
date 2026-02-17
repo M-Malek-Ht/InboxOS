@@ -54,7 +54,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
     const ta = textareaRef.current;
     if (!ta) return;
     ta.style.height = 'auto';
-    ta.style.height = `${Math.min(ta.scrollHeight, 288)}px`; // max ~12 rows
+    ta.style.height = `${Math.min(ta.scrollHeight, 144)}px`; // max ~6 rows
   }, []);
 
   useEffect(() => {
@@ -140,10 +140,10 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: 20 }}
       transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
-      className="border-t-2 border-primary/30 bg-muted/30"
+      className="border-t-2 border-primary/30 bg-muted/30 max-h-[50vh] overflow-y-auto flex-shrink-0"
     >
       {/* Header */}
-      <div className="px-4 pt-3 pb-2 flex items-center justify-between">
+      <div className="px-4 pt-2 pb-1 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
             <Send className="h-3 w-3 text-primary" />
@@ -158,14 +158,14 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       </div>
 
       {/* Textarea */}
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-1">
         <textarea
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Write your reply..."
-          rows={3}
+          rows={2}
           className={cn(
             'w-full resize-none rounded-lg border border-border bg-background px-3 py-2.5',
             'text-sm text-foreground placeholder:text-muted-foreground',
@@ -176,7 +176,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       </div>
 
       {/* AI Assist Toggle */}
-      <div className="px-4 pb-2">
+      <div className="px-4 pb-1">
         <button
           onClick={() => setShowAiAssist(!showAiAssist)}
           className={cn(
@@ -248,7 +248,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       </div>
 
       {/* Footer / Send */}
-      <div className="px-4 pb-3 flex items-center justify-between">
+      <div className="px-4 pb-2 flex items-center justify-between">
         <span className="text-[11px] text-muted-foreground">
           {modKey}+Enter to send
         </span>

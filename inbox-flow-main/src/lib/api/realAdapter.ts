@@ -40,6 +40,7 @@ function mapEmail(e: any) {
     from: e.from,
     fromName,
     fromEmail,
+    to: e.to ?? '',
     subject: e.subject ?? '(no subject)',
     snippet: e.snippet ?? '',
     body: e.body ?? '',
@@ -72,6 +73,12 @@ export const api = {
   getEmail: async (id: string) => {
     const e = await http.get<any>(`/emails/${id}`);
     return mapEmail(e);
+  },
+
+  // Thread
+  getThread: async (emailId: string) => {
+    const list = await http.get<any[]>(`/emails/${emailId}/thread`);
+    return list.map(mapEmail);
   },
 
   // Drafts (match hooks names)

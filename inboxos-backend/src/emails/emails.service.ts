@@ -139,6 +139,38 @@ export class EmailsService {
     return this.repo.findOne({ where: { id: emailId } });
   }
 
+  async getThread(userId: string, emailId: string) {
+    // Try Gmail — get the message first to find its threadId
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      try {
+        const email = await this.gmail.getMessage(accessToken, emailId);
+        if (email.threadId) {
+          const messages = await this.gmail.getThread(accessToken, email.threadId);
+          return messages;
+        }
+        return [email];
+      } catch (error) {
+        console.error('[EmailsService] Gmail getThread error:', error);
+      }
+    }
+
+    // Microsoft doesn't have a simple thread API — return single email
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      try {
+        const email = await this.microsoftMail.getMessage(msToken, emailId);
+        return [email];
+      } catch (error) {
+        console.error('[EmailsService] Microsoft getThread error:', error);
+      }
+    }
+
+    // Fallback to DB
+    const email = await this.repo.findOne({ where: { id: emailId } });
+    return email ? [email] : [];
+  }
+
   async sendReply(userId: string, emailId: string, body: string) {
     // Try Gmail
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
