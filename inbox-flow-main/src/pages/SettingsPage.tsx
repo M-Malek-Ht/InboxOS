@@ -1,22 +1,38 @@
 import { useTheme } from '@/components/ThemeProvider';
-import { useResetDemoData } from '@/lib/api/hooks';
+import { useResetDemoData, useSettings, useUpdateSettings } from '@/lib/api/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { RefreshCw, Moon, Sun, Monitor } from 'lucide-react';
+import { RefreshCw, Moon, Sun, Monitor, Sparkles } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import { useModKey } from '@/lib/hooks/useOS';
+import { Tone, Length } from '@/lib/types';
+
+const tones: Tone[] = ['Professional', 'Friendly', 'Short', 'Firm', 'Apologetic'];
+const lengths: Length[] = ['Short', 'Medium', 'Detailed'];
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const resetData = useResetDemoData();
   const modKey = useModKey();
+  const { data: settings } = useSettings();
+  const updateSettings = useUpdateSettings();
 
   const handleReset = async () => {
     await resetData.mutateAsync();
     toast.success('Demo data reset successfully');
+  };
+
+  const handleToneChange = (tone: string) => {
+    updateSettings.mutate({ defaultTone: tone });
+    toast.success(`Default tone set to ${tone}`);
+  };
+
+  const handleLengthChange = (length: string) => {
+    updateSettings.mutate({ defaultLength: length });
+    toast.success(`Default length set to ${length}`);
   };
 
   return (
@@ -43,6 +59,53 @@ export default function SettingsPage() {
                 <SelectItem value="light"><Sun className="h-4 w-4 inline mr-2" />Light</SelectItem>
                 <SelectItem value="dark"><Moon className="h-4 w-4 inline mr-2" />Dark</SelectItem>
                 <SelectItem value="system"><Monitor className="h-4 w-4 inline mr-2" />System</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-5 w-5" />
+            Auto-Draft Preferences
+          </CardTitle>
+          <CardDescription>
+            Default tone and length for automatically generated reply drafts.
+            You can still override these when manually generating a reply.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Label>Default Tone</Label>
+            <Select
+              value={settings?.defaultTone ?? 'Professional'}
+              onValueChange={handleToneChange}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {tones.map(t => (
+                  <SelectItem key={t} value={t}>{t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center justify-between">
+            <Label>Default Length</Label>
+            <Select
+              value={settings?.defaultLength ?? 'Medium'}
+              onValueChange={handleLengthChange}
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {lengths.map(l => (
+                  <SelectItem key={l} value={l}>{l}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

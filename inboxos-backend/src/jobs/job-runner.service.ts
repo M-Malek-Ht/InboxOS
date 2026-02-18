@@ -1,10 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { JobsService } from './jobs.service';
 import { AiService } from '../ai/ai.service';
 import { DraftEntity } from '../drafts/draft.entity';
 import { EmailInsightEntity } from '../emails/email-insight.entity';
+import { SettingsService } from '../settings/settings.service';
 
 /**
  * Central async job runner.
@@ -21,6 +22,7 @@ export class JobRunnerService {
   constructor(
     private readonly jobs: JobsService,
     private readonly ai: AiService,
+    private readonly settingsService: SettingsService,
     @InjectRepository(DraftEntity)
     private readonly draftsRepo: Repository<DraftEntity>,
     @InjectRepository(EmailInsightEntity)
@@ -65,7 +67,9 @@ export class JobRunnerService {
         case 'draft':
           result = await this.handleDraft(payload);
           break;
-        // Future: 'extractDates', 'workflow', 'calendarSuggestion', etc.
+        case 'auto-draft-batch':
+          result = await this.handleAutoDraftBatch(jobId, payload);
+          break;
         default:
           throw new Error(`Unknown job type: ${type}`);
       }
@@ -144,7 +148,86 @@ export class JobRunnerService {
       }
     }
 
+    // After classification, auto-draft replies for emails that need them
+    try {
+      const needsReplyInsights = await this.insightsRepo.find({
+        where: {
+          userId,
+          needsReply: true,
+          emailId: In(items.map((i) => i.emailId)),
+        },
+      });
+
+      if (needsReplyInsights.length > 0) {
+        const autoDraftItems = items.filter((item) =>
+          needsReplyInsights.some((insight) => insight.emailId === item.emailId),
+        );
+
+        if (autoDraftItems.length > 0) {
+          this.log.log(`Batch ${jobId}: enqueuing auto-draft for ${autoDraftItems.length} emails`);
+          this.enqueue('auto-draft-batch', { userId, items: autoDraftItems }).catch((err) =>
+            this.log.warn(`Failed to enqueue auto-draft-batch: ${err.message}`),
+          );
+        }
+      }
+    } catch (err: any) {
+      this.log.warn(`Batch ${jobId}: auto-draft trigger failed: ${err.message}`);
+    }
+
     return { classified, failed, total: items.length };
+  }
+
+  private async handleAutoDraftBatch(jobId: string, payload: Record<string, any>) {
+    const { userId, items } = payload as {
+      userId: string;
+      items: { emailId: string; from: string; subject: string; body: string }[];
+    };
+
+    const settings = await this.settingsService.getForUser(userId);
+    const tone = settings.defaultTone || 'Professional';
+    const length = settings.defaultLength || 'Medium';
+
+    let drafted = 0;
+    let skipped = 0;
+
+    for (const item of items) {
+      // Skip if a draft already exists for this email
+      const existingDraft = await this.draftsRepo.findOne({
+        where: { emailId: item.emailId },
+      });
+      if (existingDraft) {
+        skipped++;
+        continue;
+      }
+
+      try {
+        const content = await this.ai.generateDraft(
+          { from: item.from, subject: item.subject, body: item.body },
+          { tone, length },
+        );
+
+        const draft = this.draftsRepo.create({
+          emailId: item.emailId,
+          content,
+          version: 1,
+          tone,
+          length,
+          status: 'draft',
+        });
+        await this.draftsRepo.save(draft);
+        drafted++;
+        this.log.log(`Auto-draft ${jobId}: drafted ${drafted} (${item.emailId})`);
+      } catch (err: any) {
+        this.log.warn(`Auto-draft ${jobId}: failed ${item.emailId}: ${err.message}`);
+      }
+
+      // Rate limit delay
+      if (drafted + skipped < items.length) {
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+
+    return { drafted, skipped, total: items.length };
   }
 
   private async handleDraft(payload: Record<string, any>) {

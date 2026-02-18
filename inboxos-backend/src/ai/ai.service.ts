@@ -41,7 +41,7 @@ export class AiService {
       `Analyze the following email and return a JSON object with these fields:
 - "category": one of "Meetings", "Work", "Personal", "Bills", "Newsletters", "Support", "Other"
 - "priorityScore": integer 0-100 (100 = most urgent)
-- "needsReply": boolean (true if the sender expects a response)
+- "needsReply": boolean (true ONLY if a real person directly expects a personal response. Set to false for: automated/system emails, no-reply or noreply senders, newsletters, marketing, notifications, receipts, shipping updates, password resets, system alerts, social media notifications, calendar invites, and any email that says "do not reply" or "this is an automated message")
 - "tags": array of relevant tags (e.g. "urgent", "deadline", "meeting", "follow-up", "action-required", "fyi", "billing")
 - "summary": a 1-2 sentence summary of the email
 

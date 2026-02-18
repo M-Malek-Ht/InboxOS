@@ -16,6 +16,7 @@ export interface ParsedEmail {
   to?: string;
   messageIdHeader?: string;
   labelIds?: string[];
+  isSent?: boolean;
 }
 
 @Injectable()
@@ -103,12 +104,22 @@ export class GmailService {
       return true;
     });
 
-    // Deduplicate by threadId — keep the most recent message per thread
+    // Deduplicate by threadId — prefer received (non-SENT) messages over sent ones
     const threadMap = new Map<string, ParsedEmail>();
     for (const msg of inboxMessages) {
       const key = msg.threadId ?? msg.id;
       const existing = threadMap.get(key);
-      if (!existing || new Date(msg.receivedAt) > new Date(existing.receivedAt)) {
+      if (!existing) {
+        threadMap.set(key, msg);
+        continue;
+      }
+      const msgIsSent = msg.isSent ?? false;
+      const existingIsSent = existing.isSent ?? false;
+      if (existingIsSent && !msgIsSent) {
+        // Replace sent with received
+        threadMap.set(key, msg);
+      } else if (msgIsSent === existingIsSent && new Date(msg.receivedAt) > new Date(existing.receivedAt)) {
+        // Same type: keep most recent
         threadMap.set(key, msg);
       }
     }
@@ -267,6 +278,7 @@ export class GmailService {
       to: getHeader('to'),
       messageIdHeader: getHeader('message-id'),
       labelIds,
+      isSent: labelIds.includes('SENT'),
     };
   }
 

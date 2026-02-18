@@ -283,6 +283,33 @@ export function useAutoClassify(emails: Email[] | undefined) {
   }, [emails, queryClient]);
 }
 
+// Settings hooks
+export function useSettings() {
+  return useQuery({
+    queryKey: ['settings'] as const,
+    queryFn: () => api.getSettings(),
+  });
+}
+
+export function useUpdateSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (updates: { defaultTone?: string; defaultLength?: string }) =>
+      api.updateSettings(updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['settings'] });
+    },
+  });
+}
+
+// All drafts (latest per email)
+export function useAllDrafts() {
+  return useQuery({
+    queryKey: ['allDrafts'] as const,
+    queryFn: () => api.getAllDrafts(),
+  });
+}
+
 // Reset demo data
 export function useResetDemoData() {
   const queryClient = useQueryClient();

@@ -267,7 +267,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
             {threadMessages.map((msg: any) => {
               // If the message's from matches the original email's from, it's from the sender
               // Otherwise it's from the current user (a sent reply)
-              const isFromSender = msg.fromEmail?.toLowerCase() === email.fromEmail?.toLowerCase();
+              const isFromSender = !msg.isSent;
               return (
                 <div
                   key={msg.id}

@@ -10,6 +10,7 @@ import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { AiModule } from './ai/ai.module';
 import { JobsModule } from './jobs/jobs.module';
+import { SettingsModule } from './settings/settings.module';
 
 @Module({
   imports: [
@@ -47,6 +48,8 @@ import { JobsModule } from './jobs/jobs.module';
     AiModule,
 
     JobsModule,
+
+    SettingsModule,
   ],
   controllers: [HealthController],
 })

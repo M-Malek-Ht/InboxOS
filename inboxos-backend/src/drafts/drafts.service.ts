@@ -26,6 +26,16 @@ export class DraftsService {
     });
   }
 
+  /** Returns the latest draft per email (one entry per emailId). */
+  async listLatestDrafts(): Promise<DraftEntity[]> {
+    return this.draftsRepo
+      .createQueryBuilder('d')
+      .distinctOn(['d.emailId'])
+      .orderBy('d.emailId')
+      .addOrderBy('d.version', 'DESC')
+      .getMany();
+  }
+
   /** Save a draft with content already provided (manual edit / paste). */
   async createDirectDraft(emailId: string, dto: CreateDraftDto) {
     const latestDraft = await this.draftsRepo.findOne({

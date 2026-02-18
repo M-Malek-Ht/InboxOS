@@ -54,6 +54,7 @@ function mapEmail(e: any) {
     category: e.category,
     tags: Array.isArray(e.tags) ? e.tags : [],
     summary: e.summary ?? undefined,
+    isSent: e.isSent ?? false,
   };
 }
 
@@ -116,6 +117,15 @@ export const api = {
   // Job polling
   getJob: async (jobId: string) =>
     http.get<{ id: string; type: string; status: string; result: any; error: string | null }>(`/jobs/${jobId}`),
+
+  // Settings
+  getSettings: async () =>
+    http.get<{ defaultTone: string; defaultLength: string }>('/settings'),
+  updateSettings: async (updates: { defaultTone?: string; defaultLength?: string }) =>
+    http.patch<{ defaultTone: string; defaultLength: string }>('/settings', updates),
+
+  // All drafts (latest per email)
+  getAllDrafts: async () => http.get<any[]>('/drafts'),
 
   // Not yet implemented
   extractDates: async (_emailId: string) => ({ jobId: 'not-implemented' }),
