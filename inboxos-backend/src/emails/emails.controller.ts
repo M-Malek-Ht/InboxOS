@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, NotFoundException, Patch, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Delete, NotFoundException, Patch, Query, UseGuards, Request } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EmailsService } from './emails.service';
 import { JobRunnerService } from '../jobs/job-runner.service';
@@ -87,6 +87,12 @@ export class EmailsController {
     });
 
     return { jobId, count: items.length };
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async delete(@Param('id') id: string, @Request() req: any) {
+    return this.emails.deleteEmail(req.user.id, id);
   }
 
   @Post(':id/reply')

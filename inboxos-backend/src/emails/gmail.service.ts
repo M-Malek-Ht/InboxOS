@@ -97,29 +97,16 @@ export class GmailService {
       ),
     );
 
-    // Filter out sent-only messages (SENT label but no INBOX label)
-    const inboxMessages = messages.filter((m) => {
-      const labels = m.labelIds ?? [];
-      if (labels.includes('SENT') && !labels.includes('INBOX')) return false;
-      return true;
-    });
+    // EXCLUDE all sent messages — inbox should only show received emails.
+    // Sent replies are visible via the thread/conversation view only.
+    const receivedOnly = messages.filter((m) => !m.isSent);
 
-    // Deduplicate by threadId — prefer received (non-SENT) messages over sent ones
+    // Deduplicate by threadId — keep the most recent received message per thread
     const threadMap = new Map<string, ParsedEmail>();
-    for (const msg of inboxMessages) {
+    for (const msg of receivedOnly) {
       const key = msg.threadId ?? msg.id;
       const existing = threadMap.get(key);
-      if (!existing) {
-        threadMap.set(key, msg);
-        continue;
-      }
-      const msgIsSent = msg.isSent ?? false;
-      const existingIsSent = existing.isSent ?? false;
-      if (existingIsSent && !msgIsSent) {
-        // Replace sent with received
-        threadMap.set(key, msg);
-      } else if (msgIsSent === existingIsSent && new Date(msg.receivedAt) > new Date(existing.receivedAt)) {
-        // Same type: keep most recent
+      if (!existing || new Date(msg.receivedAt) > new Date(existing.receivedAt)) {
         threadMap.set(key, msg);
       }
     }
@@ -208,6 +195,20 @@ export class GmailService {
 
     const data = await res.json();
     return { id: data.id };
+  }
+
+  // ── trash / delete ──────────────────────────────────
+
+  async trashMessage(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}/trash`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error?.message ?? 'Failed to trash message');
+    }
   }
 
   // ── internals ───────────────────────────────────────

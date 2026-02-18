@@ -107,6 +107,10 @@ export const api = {
   sendReply: async (emailId: string, body: string, draftId?: string) =>
     http.post<{ ok: boolean; provider: string }>(`/emails/${emailId}/reply`, { body, draftId }),
 
+  // Delete (moves to trash)
+  deleteEmail: async (emailId: string) =>
+    http.delete<{ ok: boolean }>(`/emails/${emailId}`),
+
   // AI-powered endpoints (async job queue)
   classifyEmail: async (emailId: string) =>
     http.post<{ jobId: string }>(`/emails/${emailId}/classify`, {}),

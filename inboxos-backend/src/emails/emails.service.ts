@@ -196,6 +196,26 @@ export class EmailsService {
     throw new Error('No email provider linked — cannot send reply');
   }
 
+  async deleteEmail(userId: string, emailId: string) {
+    // Try Gmail — move to trash
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      await this.gmail.trashMessage(accessToken, emailId);
+      return { ok: true, provider: 'gmail' as const };
+    }
+
+    // Try Microsoft Graph
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      await this.microsoftMail.deleteMessage(msToken, emailId);
+      return { ok: true, provider: 'microsoft' as const };
+    }
+
+    // Fallback to DB delete
+    await this.repo.delete({ id: emailId });
+    return { ok: true, provider: 'db' as const };
+  }
+
   private async attachInsights<T extends { id: string }>(userId: string, emails: T[]) {
     if (!emails.length) return emails;
 

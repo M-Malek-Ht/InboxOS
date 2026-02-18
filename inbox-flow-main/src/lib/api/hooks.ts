@@ -97,6 +97,16 @@ export function useSendReply() {
   });
 }
 
+export function useDeleteEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (emailId: string) => api.deleteEmail(emailId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    },
+  });
+}
+
 // Draft hooks
 export function useDrafts(emailId: string | null) {
   return useQuery({

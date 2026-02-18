@@ -152,6 +152,20 @@ export class MicrosoftMailService {
     }
   }
 
+  // ── delete ──────────────────────────────────────────
+
+  async deleteMessage(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok && res.status !== 204) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error((error as any).error?.message ?? 'Failed to delete message');
+    }
+  }
+
   // ── internals ───────────────────────────────────────
 
   private async setReadState(accessToken: string, messageId: string, isRead: boolean): Promise<void> {

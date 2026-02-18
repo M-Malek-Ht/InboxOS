@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread, useDeleteEmail } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -19,6 +19,7 @@ import {
   Reply,
   Sparkles,
   Send as SendIcon,
+  Trash2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -38,6 +39,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
   const classifyEmail = useClassifyEmail();
   const createTask = useCreateTask();
   const extractDates = useExtractDates();
+  const deleteEmail = useDeleteEmail();
   const { data: threadMessages } = useThread(email?.id ?? null);
 
   const { data: classifyJob } = useJob(classifyJobId);
@@ -114,6 +116,17 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
     setExtractJobId(result.jobId);
   };
 
+  const handleDelete = async () => {
+    if (!email) return;
+    try {
+      await deleteEmail.mutateAsync(email.id);
+      toast.success('Email moved to trash');
+      onClose();
+    } catch {
+      toast.error('Failed to delete email');
+    }
+  };
+
   if (!email && !isLoading) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -148,9 +161,20 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
           <h2 className="text-xl font-semibold text-foreground leading-tight">
             {email.subject}
           </h2>
-          <Button variant="ghost" size="icon" onClick={onClose} className="flex-shrink-0">
-            <X className="h-5 w-5" />
-          </Button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleDelete}
+              disabled={deleteEmail.isPending}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex items-center gap-3 mb-4">
