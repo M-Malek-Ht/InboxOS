@@ -246,6 +246,34 @@ export function useJob(jobId: string | null) {
   });
 }
 
+// Sent emails
+export function useSentEmails(params: { search?: string; limit?: number } = {}) {
+  return useQuery({
+    queryKey: ['sent-emails', params] as const,
+    queryFn: () => api.getSentEmails(params),
+  });
+}
+
+// Trash emails
+export function useTrashEmails(params: { search?: string; limit?: number } = {}) {
+  return useQuery({
+    queryKey: ['trash-emails', params] as const,
+    queryFn: () => api.getTrashEmails(params),
+  });
+}
+
+// Untrash (restore from trash)
+export function useUntrashEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (emailId: string) => api.untrashEmail(emailId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trash-emails'] });
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    },
+  });
+}
+
 // Extract dates hook
 export function useExtractDates() {
   return useMutation({

@@ -292,6 +292,68 @@ export class GmailService {
     }
   }
 
+  // ── sent / trash listing ────────────────────────────
+
+  async listSentEmails(
+    accessToken: string,
+    options: { maxResults?: number; search?: string } = {},
+  ): Promise<ParsedEmail[]> {
+    const params = new URLSearchParams();
+    params.set('maxResults', String(options.maxResults ?? 40));
+    params.set('labelIds', 'SENT');
+    if (options.search) params.set('q', options.search);
+
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
+    const listRes = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const listData = await listRes.json();
+    if (!listData.messages) return [];
+
+    const messages = await Promise.all(
+      listData.messages.map((m: { id: string }) =>
+        this.fetchAndParse(accessToken, m.id),
+      ),
+    );
+    return messages;
+  }
+
+  async listTrashEmails(
+    accessToken: string,
+    options: { maxResults?: number; search?: string } = {},
+  ): Promise<ParsedEmail[]> {
+    const params = new URLSearchParams();
+    params.set('maxResults', String(options.maxResults ?? 40));
+    params.set('labelIds', 'TRASH');
+    if (options.search) params.set('q', options.search);
+
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
+    const listRes = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    const listData = await listRes.json();
+    if (!listData.messages) return [];
+
+    const messages = await Promise.all(
+      listData.messages.map((m: { id: string }) =>
+        this.fetchAndParse(accessToken, m.id),
+      ),
+    );
+    return messages;
+  }
+
+  async untrashMessage(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}/untrash`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error?.message ?? 'Failed to untrash message');
+    }
+  }
+
   // ── trash / delete ──────────────────────────────────
 
   async trashMessage(accessToken: string, messageId: string): Promise<void> {

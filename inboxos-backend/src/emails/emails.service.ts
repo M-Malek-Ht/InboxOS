@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { EmailEntity } from './email.entity';
 import { EmailInsightEntity } from './email-insight.entity';
+import { DraftEntity } from '../drafts/draft.entity';
 import { User } from '../users/entities/user.entity';
 import { GmailService } from './gmail.service';
 import { MicrosoftMailService } from './microsoft-mail.service';
@@ -16,6 +17,8 @@ export class EmailsService {
     private readonly repo: Repository<EmailEntity>,
     @InjectRepository(EmailInsightEntity)
     private readonly insightsRepo: Repository<EmailInsightEntity>,
+    @InjectRepository(DraftEntity)
+    private readonly draftsRepo: Repository<DraftEntity>,
     @InjectRepository(User)
     private readonly usersRepo: Repository<User>,
     private readonly gmail: GmailService,
@@ -206,24 +209,87 @@ export class EmailsService {
     throw new Error('No email provider linked — cannot send reply');
   }
 
+  async listSentForUser(
+    userId: string,
+    options: { search?: string; limit?: number } = {},
+  ) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      return this.gmail.listSentEmails(accessToken, {
+        maxResults: options.limit,
+        search: options.search,
+      });
+    }
+
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      return this.microsoftMail.listSentEmails(msToken, {
+        maxResults: options.limit,
+        search: options.search,
+      });
+    }
+
+    return [];
+  }
+
+  async listTrashForUser(
+    userId: string,
+    options: { search?: string; limit?: number } = {},
+  ) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      return this.gmail.listTrashEmails(accessToken, {
+        maxResults: options.limit,
+        search: options.search,
+      });
+    }
+
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      return this.microsoftMail.listTrashEmails(msToken, {
+        maxResults: options.limit,
+        search: options.search,
+      });
+    }
+
+    return [];
+  }
+
+  async untrashEmail(userId: string, emailId: string) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      await this.gmail.untrashMessage(accessToken, emailId);
+      return { ok: true, provider: 'gmail' as const };
+    }
+
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      await this.microsoftMail.untrashMessage(msToken, emailId);
+      return { ok: true, provider: 'microsoft' as const };
+    }
+
+    return { ok: false };
+  }
+
   async deleteEmail(userId: string, emailId: string) {
     // Try Gmail — move to trash
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
     if (accessToken) {
       await this.gmail.trashMessage(accessToken, emailId);
-      return { ok: true, provider: 'gmail' as const };
+    } else {
+      const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+      if (msToken) {
+        await this.microsoftMail.deleteMessage(msToken, emailId);
+      } else {
+        await this.repo.delete({ id: emailId });
+      }
     }
 
-    // Try Microsoft Graph
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    if (msToken) {
-      await this.microsoftMail.deleteMessage(msToken, emailId);
-      return { ok: true, provider: 'microsoft' as const };
-    }
+    // Clean up insights and drafts so deleted email doesn't affect dashboard
+    await this.insightsRepo.delete({ userId, emailId });
+    await this.draftsRepo.delete({ emailId });
 
-    // Fallback to DB delete
-    await this.repo.delete({ id: emailId });
-    return { ok: true, provider: 'db' as const };
+    return { ok: true };
   }
 
   private async attachInsights<T extends { id: string }>(userId: string, emails: T[]) {

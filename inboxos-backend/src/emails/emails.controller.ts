@@ -25,6 +25,32 @@ export class EmailsController {
     });
   }
 
+  @Get('sent')
+  @UseGuards(JwtAuthGuard)
+  async listSent(
+    @Request() req: any,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.emails.listSentForUser(req.user.id, {
+      search,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
+  @Get('trash')
+  @UseGuards(JwtAuthGuard)
+  async listTrash(
+    @Request() req: any,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.emails.listTrashForUser(req.user.id, {
+      search,
+      limit: limit ? Number(limit) : undefined,
+    });
+  }
+
   @Get(':id/thread')
   @UseGuards(JwtAuthGuard)
   async getThread(@Param('id') id: string, @Request() req: any) {
@@ -93,6 +119,12 @@ export class EmailsController {
   @UseGuards(JwtAuthGuard)
   async delete(@Param('id') id: string, @Request() req: any) {
     return this.emails.deleteEmail(req.user.id, id);
+  }
+
+  @Post(':id/untrash')
+  @UseGuards(JwtAuthGuard)
+  async untrash(@Param('id') id: string, @Request() req: any) {
+    return this.emails.untrashEmail(req.user.id, id);
   }
 
   @Post(':id/reply')

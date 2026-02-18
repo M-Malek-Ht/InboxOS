@@ -131,6 +131,28 @@ export const api = {
   // All drafts (latest per email)
   getAllDrafts: async () => http.get<any[]>('/drafts'),
 
+  // Sent emails
+  getSentEmails: async (params: any) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    qs.set('limit', String(params?.limit ?? 40));
+    const list = await http.get<any[]>(`/emails/sent?${qs.toString()}`);
+    return list.map(mapEmail);
+  },
+
+  // Trash emails
+  getTrashEmails: async (params: any) => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set('search', params.search);
+    qs.set('limit', String(params?.limit ?? 40));
+    const list = await http.get<any[]>(`/emails/trash?${qs.toString()}`);
+    return list.map(mapEmail);
+  },
+
+  // Untrash (restore from trash)
+  untrashEmail: async (emailId: string) =>
+    http.post<{ ok: boolean }>(`/emails/${emailId}/untrash`, {}),
+
   // Not yet implemented
   extractDates: async (_emailId: string) => ({ jobId: 'not-implemented' }),
   resetDemoData: async () => ({ ok: true }),

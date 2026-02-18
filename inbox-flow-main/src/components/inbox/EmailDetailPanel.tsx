@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread, useDeleteEmail } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread, useDeleteEmail, useUntrashEmail } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -20,6 +20,7 @@ import {
   Sparkles,
   Send as SendIcon,
   Trash2,
+  ArchiveRestore,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,10 +28,11 @@ interface EmailDetailPanelProps {
   email: Email | null;
   isLoading?: boolean;
   onClose: () => void;
-  onGenerateDraft: () => void;
+  onGenerateDraft?: () => void;
+  mode?: 'inbox' | 'sent' | 'trash';
 }
 
-export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }: EmailDetailPanelProps) {
+export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, mode = 'inbox' }: EmailDetailPanelProps) {
   const queryClient = useQueryClient();
   const [classifyJobId, setClassifyJobId] = useState<string | null>(null);
   const [extractJobId, setExtractJobId] = useState<string | null>(null);
@@ -40,7 +42,8 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
   const createTask = useCreateTask();
   const extractDates = useExtractDates();
   const deleteEmail = useDeleteEmail();
-  const { data: threadMessages } = useThread(email?.id ?? null);
+  const untrashEmail = useUntrashEmail();
+  const { data: threadMessages } = useThread(mode === 'inbox' ? (email?.id ?? null) : null);
 
   const { data: classifyJob } = useJob(classifyJobId);
   const { data: extractJob } = useJob(extractJobId);
@@ -127,6 +130,17 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
     }
   };
 
+  const handleUntrash = async () => {
+    if (!email) return;
+    try {
+      await untrashEmail.mutateAsync(email.id);
+      toast.success('Email restored to inbox');
+      onClose();
+    } catch {
+      toast.error('Failed to restore email');
+    }
+  };
+
   if (!email && !isLoading) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -162,15 +176,28 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
             {email.subject}
           </h2>
           <div className="flex items-center gap-1 flex-shrink-0">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDelete}
-              disabled={deleteEmail.isPending}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              <Trash2 className="h-5 w-5" />
-            </Button>
+            {mode === 'trash' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleUntrash}
+                disabled={untrashEmail.isPending}
+                className="text-muted-foreground hover:text-green-600"
+              >
+                <ArchiveRestore className="h-5 w-5" />
+              </Button>
+            )}
+            {mode === 'inbox' && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDelete}
+                disabled={deleteEmail.isPending}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={onClose}>
               <X className="h-5 w-5" />
             </Button>
@@ -231,58 +258,60 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
         )}
       </div>
 
-      {/* Actions */}
-      <div className="p-4 border-b border-border flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleClassify}
-          disabled={!!classifyJobId}
-          className="gap-2"
-        >
-          <RotateCw className={cn('h-4 w-4', classifyJobId && 'animate-spin')} />
-          Re-classify
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleCreateTask}
-          disabled={createTask.isPending}
-          className="gap-2"
-        >
-          <CheckSquare className="h-4 w-4" />
-          Create Task
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExtractDates}
-          disabled={!!extractJobId}
-          className="gap-2"
-        >
-          <Calendar className={cn('h-4 w-4', extractJobId && 'animate-spin')} />
-          Extract Dates
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onGenerateDraft}
-          className="gap-2"
-        >
-          <FileText className="h-4 w-4" />
-          Full Editor
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-        <Button
-          size="sm"
-          onClick={() => setShowReply(true)}
-          disabled={showReply}
-          className="gap-2 ml-auto"
-        >
-          <Reply className="h-4 w-4" />
-          Reply
-        </Button>
-      </div>
+      {/* Actions — only shown in inbox mode */}
+      {mode === 'inbox' && (
+        <div className="p-4 border-b border-border flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleClassify}
+            disabled={!!classifyJobId}
+            className="gap-2"
+          >
+            <RotateCw className={cn('h-4 w-4', classifyJobId && 'animate-spin')} />
+            Re-classify
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleCreateTask}
+            disabled={createTask.isPending}
+            className="gap-2"
+          >
+            <CheckSquare className="h-4 w-4" />
+            Create Task
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExtractDates}
+            disabled={!!extractJobId}
+            className="gap-2"
+          >
+            <Calendar className={cn('h-4 w-4', extractJobId && 'animate-spin')} />
+            Extract Dates
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onGenerateDraft}
+            className="gap-2"
+          >
+            <FileText className="h-4 w-4" />
+            Full Editor
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setShowReply(true)}
+            disabled={showReply}
+            className="gap-2 ml-auto"
+          >
+            <Reply className="h-4 w-4" />
+            Reply
+          </Button>
+        </div>
+      )}
 
       {/* Conversation Thread */}
       <div className="flex-1 overflow-y-auto min-h-0">
@@ -344,9 +373,9 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
         )}
       </div>
 
-      {/* Reply Composer */}
+      {/* Reply Composer — only in inbox mode */}
       <AnimatePresence>
-        {showReply && (
+        {mode === 'inbox' && showReply && (
           <ReplyComposer
             email={email}
             onSent={() => {

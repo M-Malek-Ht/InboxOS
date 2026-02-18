@@ -2,6 +2,8 @@ import { NavLink } from '@/components/NavLink';
 import { cn } from '@/lib/utils';
 import {
   Inbox,
+  Send,
+  Trash2,
   FileText,
   CheckSquare,
   Calendar,
@@ -20,6 +22,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 const navItems = [
   { name: 'Dashboard', path: '/', icon: LayoutDashboard },
   { name: 'Inbox', path: '/inbox', icon: Inbox },
+  { name: 'Sent', path: '/sent', icon: Send },
+  { name: 'Trash', path: '/trash', icon: Trash2 },
   { name: 'Drafts', path: '/drafts', icon: FileText },
   { name: 'Workflows', path: '/workflows', icon: CheckSquare },
   { name: 'Calendar', path: '/calendar', icon: Calendar },

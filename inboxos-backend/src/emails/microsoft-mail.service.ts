@@ -152,6 +152,26 @@ export class MicrosoftMailService {
     }
   }
 
+  // ── sent / trash listing (stubs) ────────────────────
+
+  async listSentEmails(
+    _accessToken: string,
+    _options: { maxResults?: number; search?: string } = {},
+  ): Promise<ParsedEmail[]> {
+    return [];
+  }
+
+  async listTrashEmails(
+    _accessToken: string,
+    _options: { maxResults?: number; search?: string } = {},
+  ): Promise<ParsedEmail[]> {
+    return [];
+  }
+
+  async untrashMessage(_accessToken: string, _messageId: string): Promise<void> {
+    // Not implemented for Microsoft yet
+  }
+
   // ── delete ──────────────────────────────────────────
 
   async deleteMessage(accessToken: string, messageId: string): Promise<void> {
