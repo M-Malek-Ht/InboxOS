@@ -1,5 +1,4 @@
-
+node_modules
 inboxos-backend/src/auth/data
 .env
 .env.*
-

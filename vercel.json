@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "installCommand": "npm install && cd inboxos-backend && npm install && cd ../inbox-flow-main && npm install",
+  "buildCommand": "cd inboxos-backend && npx nest build && cd ../inbox-flow-main && npm run build",
+  "outputDirectory": "inbox-flow-main/dist",
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "inboxos-backend/dist/**",
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
