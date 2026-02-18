@@ -1,7 +1,7 @@
 {
   "version": 2,
   "installCommand": "npm install --include=dev && cd inboxos-backend && npm install --include=dev && cd ../inbox-flow-main && npm install --include=dev",
-  "buildCommand": "cd inboxos-backend && npm run build && cd ../inbox-flow-main && npm run build && cd .. && cp -r inboxos-backend/dist api/backend-dist && npx ncc build api/_handler.js -o api",
+  "buildCommand": "cd inboxos-backend && npm run build && cd ../inbox-flow-main && npm run build",
   "outputDirectory": "inbox-flow-main/dist",
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
