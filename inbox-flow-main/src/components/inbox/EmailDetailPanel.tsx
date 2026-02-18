@@ -351,7 +351,15 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft }:
             email={email}
             onSent={() => {
               setShowReply(false);
-              queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+              // Give Gmail a moment to index the sent reply into the thread
+              // before refetching, then refetch again after a longer delay
+              // in case the first one was too early.
+              setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+              }, 1500);
+              setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+              }, 4000);
             }}
             onClose={() => setShowReply(false)}
           />

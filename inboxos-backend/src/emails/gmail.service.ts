@@ -69,10 +69,10 @@ export class GmailService {
     params.set('maxResults', String(options.maxResults ?? 40));
     params.append('labelIds', 'INBOX');
 
-    // Always exclude sent messages from the inbox query — sent replies
-    // must only appear inside the thread/conversation view, never as
-    // separate inbox entries.
-    const qParts: string[] = ['-in:sent'];
+    // Exclude ALL messages sent by the authenticated user.  Using
+    // "-from:me" is more reliable than "-in:sent" because it filters
+    // on the From header, not on Gmail labels which can be inconsistent.
+    const qParts: string[] = ['-from:me'];
     if (options.filter === 'unread') qParts.push('is:unread');
     if (options.search) qParts.push(options.search);
     params.set('q', qParts.join(' '));
@@ -100,9 +100,17 @@ export class GmailService {
       ),
     );
 
+    // Get the authenticated user's email for extra filtering
+    const profile = await this.getUserProfile(accessToken);
+    const myEmail = profile?.toLowerCase();
+
     // EXCLUDE all sent messages — inbox should only show received emails.
-    // Sent replies are visible via the thread/conversation view only.
-    const receivedOnly = messages.filter((m) => !m.isSent);
+    // Check both: SENT label AND from-address matching the user.
+    const receivedOnly = messages.filter((m) => {
+      if (m.isSent) return false;
+      if (myEmail && m.from.toLowerCase().includes(myEmail)) return false;
+      return true;
+    });
 
     // Deduplicate by threadId — keep the most recent received message per thread
     const threadMap = new Map<string, ParsedEmail>();
@@ -130,6 +138,22 @@ export class GmailService {
   async markAsUnread(accessToken: string, messageId: string): Promise<void> {
     console.log('[GmailService] markAsUnread called with messageId:', messageId);
     await this.setReadState(accessToken, messageId, false);
+  }
+
+  // ── profile ────────────────────────────────────────
+
+  private async getUserProfile(accessToken: string): Promise<string | null> {
+    try {
+      const res = await fetch(
+        'https://www.googleapis.com/gmail/v1/users/me/profile',
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.emailAddress ?? null;
+    } catch {
+      return null;
+    }
   }
 
   // ── thread ─────────────────────────────────────────
