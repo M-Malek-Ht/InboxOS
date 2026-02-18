@@ -1,4 +1,5 @@
 node_modules
+api/backend-dist
 inboxos-backend/src/auth/data
 .env
 .env.*

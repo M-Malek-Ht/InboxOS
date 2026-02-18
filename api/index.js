@@ -10,8 +10,8 @@ let app;
 async function bootstrap() {
   if (app) return;
 
-  // Import the pre-compiled NestJS app from the backend's dist/ output
-  const { AppModule } = require('../inboxos-backend/dist/src/app.module');
+  // Import the pre-compiled NestJS app (copied into api/ during build)
+  const { AppModule } = require('./backend-dist/src/app.module');
 
   const nestApp = await NestFactory.create(
     AppModule,
