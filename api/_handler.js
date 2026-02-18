@@ -1,22 +1,20 @@
+require('reflect-metadata'); // Must be first — NestJS decorators depend on this
+
 const { NestFactory } = require('@nestjs/core');
 const { ExpressAdapter } = require('@nestjs/platform-express');
 const { ValidationPipe } = require('@nestjs/common');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 
+// Pre-load the compiled NestJS app (ncc bundles this at build time)
+const { AppModule } = require('./backend-dist/src/app.module');
+
 const server = express();
 let app;
 
 async function bootstrap() {
   if (app) return;
-
-  // Import the pre-compiled NestJS app (copied into api/ during build)
-  const { AppModule } = require('./backend-dist/src/app.module');
-
-  const nestApp = await NestFactory.create(
-    AppModule,
-    new ExpressAdapter(server),
-  );
+  const nestApp = await NestFactory.create(AppModule, new ExpressAdapter(server));
   nestApp.use(cookieParser());
   nestApp.enableCors({
     origin: [process.env.FRONTEND_URL, 'http://localhost:8080'].filter(Boolean),

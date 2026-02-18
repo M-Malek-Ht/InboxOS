@@ -5,6 +5,9 @@
   "engines": {
     "node": ">=18"
   },
+  "devDependencies": {
+    "@vercel/ncc": "^0.38.3"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@nestjs/common": "^11.0.1",
