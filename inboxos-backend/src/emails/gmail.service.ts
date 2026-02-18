@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,6 +21,8 @@ export interface ParsedEmail {
 
 @Injectable()
 export class GmailService {
+  private readonly log = new Logger(GmailService.name);
+
   constructor(
     @InjectRepository(Account)
     private accountRepo: Repository<Account>,
@@ -30,12 +32,9 @@ export class GmailService {
   // ── token management ────────────────────────────────
 
   async getAccessTokenForUser(userId: string): Promise<string | null> {
-    console.log('[GmailService] Looking for account with userId:', userId);
     const account = await this.accountRepo.findOne({
       where: { userId, provider: 'google' },
     });
-    console.log('[GmailService] Account found:', account ? 'YES' : 'NO');
-    console.log('[GmailService] Has refreshToken:', account?.refreshToken ? 'YES' : 'NO');
     if (!account?.refreshToken) return null;
     return this.refreshAccessToken(account.refreshToken);
   }
@@ -61,82 +60,90 @@ export class GmailService {
 
   // ── Gmail API ───────────────────────────────────────
 
+  /**
+   * List inbox emails using threads.list → threads.get approach.
+   *
+   * Why threads.list instead of messages.list?
+   * -  messages.list can return sent replies that Gmail auto-labels
+   *    as INBOX (depending on account settings / filters).
+   * -  threads.list + picking the first *received* message per thread
+   *    guarantees we only show emails from other people.
+   */
   async listEmails(
     accessToken: string,
     options: { maxResults?: number; filter?: string; search?: string } = {},
   ): Promise<ParsedEmail[]> {
+    // Step 1: Get the user's own email so we can identify sent messages
+    const myEmail = (await this.getUserProfile(accessToken))?.toLowerCase();
+    this.log.log(`User email: ${myEmail ?? 'unknown'}`);
+
+    // Step 2: List threads in INBOX
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
-    params.append('labelIds', 'INBOX');
+    params.set('labelIds', 'INBOX');
 
-    // Exclude ALL messages sent by the authenticated user.  Using
-    // "-from:me" is more reliable than "-in:sent" because it filters
-    // on the From header, not on Gmail labels which can be inconsistent.
-    const qParts: string[] = ['-from:me'];
+    const qParts: string[] = [];
     if (options.filter === 'unread') qParts.push('is:unread');
     if (options.search) qParts.push(options.search);
-    params.set('q', qParts.join(' '));
+    if (qParts.length > 0) params.set('q', qParts.join(' '));
 
-    const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
-    console.log('[GmailService] Fetching emails from:', url);
+    const listUrl = `https://www.googleapis.com/gmail/v1/users/me/threads?${params.toString()}`;
+    this.log.log(`Listing threads: ${listUrl}`);
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${accessToken}` }
+    const listRes = await fetch(listUrl, {
+      headers: { Authorization: `Bearer ${accessToken}` },
     });
+    const listData = await listRes.json();
 
-    console.log('[GmailService] Gmail API response status:', res.status);
-    const data = await res.json();
-    console.log('[GmailService] Gmail API response:', JSON.stringify(data, null, 2));
+    if (!listData.threads) return [];
+    this.log.log(`Found ${listData.threads.length} threads`);
 
-    if (!data.messages) {
-      console.log('[GmailService] No messages array in response');
-      return [];
-    }
+    // Step 3: Fetch each thread in full, pick the best received message
+    const results: ParsedEmail[] = [];
 
-    console.log('[GmailService] Found', data.messages.length, 'message IDs');
-    const messages = await Promise.all(
-      data.messages.map((msg: { id: string }) =>
-        this.fetchAndParse(accessToken, msg.id),
+    const threads = await Promise.all(
+      listData.threads.map((t: { id: string }) =>
+        this.fetchThread(accessToken, t.id),
       ),
     );
 
-    // Get the authenticated user's email for extra filtering
-    const profile = await this.getUserProfile(accessToken);
-    const myEmail = profile?.toLowerCase();
+    for (const threadMessages of threads) {
+      if (!threadMessages || threadMessages.length === 0) continue;
 
-    // EXCLUDE all sent messages — inbox should only show received emails.
-    // Check both: SENT label AND from-address matching the user.
-    const receivedOnly = messages.filter((m) => {
-      if (m.isSent) return false;
-      if (myEmail && m.from.toLowerCase().includes(myEmail)) return false;
-      return true;
-    });
+      // Find the most recent message NOT from the current user
+      const received = threadMessages.filter((m) => {
+        if (m.isSent) return false;
+        if (myEmail && m.from.toLowerCase().includes(myEmail)) return false;
+        return true;
+      });
 
-    // Deduplicate by threadId — keep the most recent received message per thread
-    const threadMap = new Map<string, ParsedEmail>();
-    for (const msg of receivedOnly) {
-      const key = msg.threadId ?? msg.id;
-      const existing = threadMap.get(key);
-      if (!existing || new Date(msg.receivedAt) > new Date(existing.receivedAt)) {
-        threadMap.set(key, msg);
+      if (received.length > 0) {
+        // Pick the most recent received message
+        received.sort(
+          (a, b) =>
+            new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime(),
+        );
+        results.push(received[0]);
+      } else {
+        // Thread has ONLY sent messages — skip it entirely
+        this.log.debug(
+          `Skipping thread (all sent): ${threadMessages[0]?.subject}`,
+        );
       }
     }
 
-    return Array.from(threadMap.values());
+    return results;
   }
 
   async getMessage(accessToken: string, messageId: string): Promise<ParsedEmail> {
-    console.log('[GmailService] getMessage called with messageId:', messageId);
     return this.fetchAndParse(accessToken, messageId);
   }
 
   async markAsRead(accessToken: string, messageId: string): Promise<void> {
-    console.log('[GmailService] markAsRead called with messageId:', messageId);
     await this.setReadState(accessToken, messageId, true);
   }
 
   async markAsUnread(accessToken: string, messageId: string): Promise<void> {
-    console.log('[GmailService] markAsUnread called with messageId:', messageId);
     await this.setReadState(accessToken, messageId, false);
   }
 
@@ -162,14 +169,21 @@ export class GmailService {
     accessToken: string,
     threadId: string,
   ): Promise<ParsedEmail[]> {
+    return this.fetchThread(accessToken, threadId);
+  }
+
+  private async fetchThread(
+    accessToken: string,
+    threadId: string,
+  ): Promise<ParsedEmail[]> {
     const url = `https://www.googleapis.com/gmail/v1/users/me/threads/${threadId}?format=full`;
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
 
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error?.message ?? 'Failed to fetch thread');
+      this.log.warn(`Failed to fetch thread ${threadId}: ${res.status}`);
+      return [];
     }
 
     const data = await res.json();
@@ -221,7 +235,33 @@ export class GmailService {
     }
 
     const data = await res.json();
-    return { id: data.id };
+    const sentId: string = data.id;
+
+    // Immediately strip INBOX label from the sent message so it never
+    // appears as a received email in the inbox.
+    this.removeFromInbox(accessToken, sentId).catch((err) =>
+      this.log.warn(`Could not remove INBOX label from sent reply ${sentId}: ${err.message}`),
+    );
+
+    return { id: sentId };
+  }
+
+  /**
+   * Remove the INBOX label from a message so it doesn't appear in the inbox.
+   */
+  private async removeFromInbox(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}/modify`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ removeLabelIds: ['INBOX'] }),
+    });
+    if (res.ok) {
+      this.log.log(`Removed INBOX label from sent message ${messageId}`);
+    }
   }
 
   // ── trash / delete ──────────────────────────────────
@@ -242,23 +282,18 @@ export class GmailService {
 
   private async fetchAndParse(accessToken: string, messageId: string): Promise<ParsedEmail> {
     const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}?format=full`;
-    console.log('[GmailService] fetchAndParse URL:', url);
 
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    console.log('[GmailService] fetchAndParse response status:', res.status);
     const msg = await res.json();
 
     if (msg.error) {
-      console.error('[GmailService] fetchAndParse error:', msg.error);
       throw new Error(msg.error.message);
     }
 
-    const parsed = this.parseMessage(msg);
-    console.log('[GmailService] Parsed email subject:', parsed.subject);
-    return parsed;
+    return this.parseMessage(msg);
   }
 
   private async setReadState(accessToken: string, messageId: string, isRead: boolean): Promise<void> {
@@ -278,11 +313,8 @@ export class GmailService {
 
     if (!res.ok) {
       const error = await res.json();
-      console.error('[GmailService] setReadState error:', error);
       throw new Error(error.error?.message ?? 'Failed to update read state');
     }
-
-    console.log('[GmailService] Email read state updated:', isRead ? 'read' : 'unread');
   }
 
   private parseMessage(msg: any): ParsedEmail {
@@ -290,7 +322,6 @@ export class GmailService {
     const getHeader = (name: string) =>
       headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ?? '';
 
-    // Check if email is unread by looking at labelIds
     const labelIds: string[] = msg.labelIds ?? [];
     const isRead = !labelIds.includes('UNREAD');
 
@@ -313,12 +344,10 @@ export class GmailService {
   private extractBody(payload: any): string {
     if (!payload) return '';
 
-    // Simple (non-multipart) message
     if (payload.body?.data) {
       return this.decodeBase64Url(payload.body.data);
     }
 
-    // Multipart — prefer text/plain, fallback text/html, then recurse into nested multipart
     if (payload.parts) {
       const textPart = payload.parts.find((p: any) => p.mimeType === 'text/plain');
       if (textPart) return this.extractBody(textPart);
@@ -335,7 +364,6 @@ export class GmailService {
     return '';
   }
 
-  // Gmail uses base64url encoding (- and _ instead of + and /)
   private decodeBase64Url(data: string): string {
     const base64 = data.replace(/-/g, '+').replace(/_/g, '/');
     return Buffer.from(base64, 'base64').toString('utf-8');
