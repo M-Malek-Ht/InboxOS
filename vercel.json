@@ -5,7 +5,7 @@
   "outputDirectory": "inbox-flow-main/dist",
   "functions": {
     "api/index.js": {
-      "includeFiles": "inboxos-backend/**",
+      "includeFiles": "../inboxos-backend/**",
       "maxDuration": 60
     }
   },
