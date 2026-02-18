@@ -4,7 +4,7 @@
   "buildCommand": "cd inboxos-backend && npm run build && cd ../inbox-flow-main && npm run build && cd .. && cp -r inboxos-backend/dist api/backend-dist && ./node_modules/.bin/ncc build api/_handler.js -o api",
   "outputDirectory": "inbox-flow-main/dist",
   "functions": {
-    "api/index.js": {
+    "api/*.js": {
       "maxDuration": 60
     }
   },
