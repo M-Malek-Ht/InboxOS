@@ -69,10 +69,13 @@ export class GmailService {
     params.set('maxResults', String(options.maxResults ?? 40));
     params.append('labelIds', 'INBOX');
 
-    const qParts: string[] = [];
+    // Always exclude sent messages from the inbox query — sent replies
+    // must only appear inside the thread/conversation view, never as
+    // separate inbox entries.
+    const qParts: string[] = ['-in:sent'];
     if (options.filter === 'unread') qParts.push('is:unread');
     if (options.search) qParts.push(options.search);
-    if (qParts.length > 0) params.set('q', qParts.join(' '));
+    params.set('q', qParts.join(' '));
 
     const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
     console.log('[GmailService] Fetching emails from:', url);
