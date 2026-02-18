@@ -71,13 +71,21 @@ export class GmailService {
    */
   async listEmails(
     accessToken: string,
-    options: { maxResults?: number; filter?: string; search?: string } = {},
+    options: {
+      maxResults?: number;
+      filter?: string;
+      search?: string;
+      userEmail?: string;
+    } = {},
   ): Promise<ParsedEmail[]> {
-    // Step 1: Get the user's own email so we can identify sent messages
-    const myEmail = (await this.getUserProfile(accessToken))?.toLowerCase();
-    this.log.log(`User email: ${myEmail ?? 'unknown'}`);
+    // The user's email is passed from the database (reliable).
+    // Fall back to Gmail profile API if not provided.
+    const myEmail =
+      options.userEmail?.toLowerCase() ??
+      (await this.getUserProfile(accessToken))?.toLowerCase();
+    this.log.log(`listEmails: userEmail=${myEmail ?? 'UNKNOWN — filtering will be weak!'}`);
 
-    // Step 2: List threads in INBOX
+    // List threads in INBOX
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
     params.set('labelIds', 'INBOX');
@@ -110,24 +118,40 @@ export class GmailService {
     for (const threadMessages of threads) {
       if (!threadMessages || threadMessages.length === 0) continue;
 
-      // Find the most recent message NOT from the current user
+      // Log every message in the thread for debugging
+      for (const m of threadMessages) {
+        this.log.debug(
+          `  msg id=${m.id} from="${m.from}" isSent=${m.isSent} labels=${m.labelIds?.join(',')}`,
+        );
+      }
+
+      // Find messages NOT from the current user
       const received = threadMessages.filter((m) => {
-        if (m.isSent) return false;
-        if (myEmail && m.from.toLowerCase().includes(myEmail)) return false;
+        // Check 1: SENT label
+        if (m.isSent) {
+          this.log.debug(`  FILTERED (isSent): ${m.id}`);
+          return false;
+        }
+        // Check 2: From address matches the user's email
+        if (myEmail && m.from.toLowerCase().includes(myEmail)) {
+          this.log.debug(`  FILTERED (from matches user): ${m.id} from="${m.from}"`);
+          return false;
+        }
         return true;
       });
 
       if (received.length > 0) {
-        // Pick the most recent received message
         received.sort(
           (a, b) =>
             new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime(),
         );
+        this.log.log(
+          `Thread: picked msg ${received[0].id} subject="${received[0].subject}" (${threadMessages.length} msgs, ${received.length} received)`,
+        );
         results.push(received[0]);
       } else {
-        // Thread has ONLY sent messages — skip it entirely
-        this.log.debug(
-          `Skipping thread (all sent): ${threadMessages[0]?.subject}`,
+        this.log.log(
+          `Thread SKIPPED (all sent/from-user): subject="${threadMessages[0]?.subject}" (${threadMessages.length} msgs)`,
         );
       }
     }
@@ -236,12 +260,16 @@ export class GmailService {
 
     const data = await res.json();
     const sentId: string = data.id;
+    this.log.log(`Reply sent: id=${sentId}, threadId=${params.threadId}`);
 
     // Immediately strip INBOX label from the sent message so it never
-    // appears as a received email in the inbox.
-    this.removeFromInbox(accessToken, sentId).catch((err) =>
-      this.log.warn(`Could not remove INBOX label from sent reply ${sentId}: ${err.message}`),
-    );
+    // appears as a received email in the inbox. AWAIT this — don't
+    // return to the client until the label is removed.
+    try {
+      await this.removeFromInbox(accessToken, sentId);
+    } catch (err: any) {
+      this.log.warn(`Could not remove INBOX label from sent reply ${sentId}: ${err.message}`);
+    }
 
     return { id: sentId };
   }

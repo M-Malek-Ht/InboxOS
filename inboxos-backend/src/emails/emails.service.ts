@@ -1,18 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { EmailEntity } from './email.entity';
 import { EmailInsightEntity } from './email-insight.entity';
+import { User } from '../users/entities/user.entity';
 import { GmailService } from './gmail.service';
 import { MicrosoftMailService } from './microsoft-mail.service';
 
 @Injectable()
 export class EmailsService {
+  private readonly log = new Logger(EmailsService.name);
+
   constructor(
     @InjectRepository(EmailEntity)
     private readonly repo: Repository<EmailEntity>,
     @InjectRepository(EmailInsightEntity)
     private readonly insightsRepo: Repository<EmailInsightEntity>,
+    @InjectRepository(User)
+    private readonly usersRepo: Repository<User>,
     private readonly gmail: GmailService,
     private readonly microsoftMail: MicrosoftMailService,
   ) {}
@@ -21,20 +26,25 @@ export class EmailsService {
     userId: string,
     options: { filter?: string; search?: string; limit?: number } = {},
   ) {
-    console.log('[EmailsService] listForUser called with userId:', userId);
+    // Get the user's own email address from the database — this is
+    // used to reliably filter out sent messages from the inbox.
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    const userEmail = user?.email?.toLowerCase();
+    this.log.log(`listForUser: userId=${userId}, userEmail=${userEmail}`);
+
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
-    console.log('[EmailsService] accessToken retrieved:', accessToken ? 'YES' : 'NO');
     if (accessToken) {
       try {
         const emails = await this.gmail.listEmails(accessToken, {
           maxResults: options.limit,
           filter: options.filter,
           search: options.search,
+          userEmail,
         });
-        console.log('[EmailsService] Gmail returned', emails.length, 'emails');
+        this.log.log(`Gmail returned ${emails.length} emails`);
         return this.attachInsights(userId, emails);
       } catch (error) {
-        console.error('[EmailsService] Gmail API error:', error);
+        this.log.error(`Gmail API error: ${error}`);
       }
     }
 
