@@ -1,5 +1,4 @@
-# compiled output
-/dist
+# compiled output (dist is committed so Vercel can trace it)
 /node_modules
 /build
 
