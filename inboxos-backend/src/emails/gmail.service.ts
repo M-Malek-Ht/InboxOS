@@ -331,7 +331,9 @@ export class GmailService {
   ): Promise<ParsedEmail[]> {
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
-    // Use Gmail search operator for reliable trash querying (labelIds=TRASH has propagation delays)
+    // CRITICAL: includeSpamTrash=true is required — Gmail messages.list defaults to false,
+    // which silently omits trash messages even when q=in:trash is specified.
+    params.set('includeSpamTrash', 'true');
     const qParts = ['in:trash'];
     if (options.search) qParts.push(options.search);
     params.set('q', qParts.join(' '));
