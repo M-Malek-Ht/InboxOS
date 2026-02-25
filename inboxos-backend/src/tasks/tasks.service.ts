@@ -20,8 +20,8 @@ export class TasksService {
     const task = this.repo.create({
       title: dto.title,
       description: dto.description ?? '',
-      status: dto.status ?? 'todo',
-      priority: dto.priority ?? 'medium',
+      status: dto.status ?? 'Backlog',
+      priority: dto.priority ?? 'Med',
       dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
     });
     return this.repo.save(task);
