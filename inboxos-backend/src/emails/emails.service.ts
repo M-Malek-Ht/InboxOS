@@ -5,7 +5,7 @@ import { EmailEntity } from './email.entity';
 import { EmailInsightEntity } from './email-insight.entity';
 import { DraftEntity } from '../drafts/draft.entity';
 import { User } from '../users/entities/user.entity';
-import { GmailService } from './gmail.service';
+import { GmailService, ParsedEmail } from './gmail.service';
 import { MicrosoftMailService } from './microsoft-mail.service';
 
 @Injectable()
@@ -273,30 +273,8 @@ export class EmailsService {
     userId: string,
     options: { search?: string; limit?: number } = {},
   ) {
-    const accessToken = await this.gmail.getAccessTokenForUser(userId);
-    if (accessToken) {
-      try {
-        return await this.gmail.listTrashEmails(accessToken, {
-          maxResults: options.limit,
-          search: options.search,
-        });
-      } catch (error) {
-        this.log.error(`Gmail trash list error: ${error}`);
-      }
-    }
-
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    if (msToken) {
-      try {
-        return await this.microsoftMail.listTrashEmails(msToken, {
-          maxResults: options.limit,
-          search: options.search,
-        });
-      } catch (error) {
-        this.log.error(`Microsoft trash list error: ${error}`);
-      }
-    }
-
+    // Always serve trash from local DB — emails are cached there on delete
+    // so this works regardless of provider availability or API propagation delays.
     const qb = this.repo.createQueryBuilder('email');
     qb.where('email.isTrashed = true');
     if (options.search) {
@@ -311,48 +289,72 @@ export class EmailsService {
   }
 
   async untrashEmail(userId: string, emailId: string) {
-    const accessToken = await this.gmail.getAccessTokenForUser(userId);
-    if (accessToken) {
-      await this.gmail.untrashMessage(accessToken, emailId);
-      return { ok: true, provider: 'gmail' as const };
+    // emailId is a local DB UUID — look up externalId to call provider API
+    const local = await this.repo.findOne({ where: { id: emailId } });
+    const externalId = local?.externalId ?? null;
+
+    if (externalId) {
+      const accessToken = await this.gmail.getAccessTokenForUser(userId);
+      if (accessToken) {
+        await this.gmail.untrashMessage(accessToken, externalId);
+      } else {
+        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+        if (msToken) {
+          await this.microsoftMail.untrashMessage(msToken, externalId);
+        }
+      }
     }
 
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    if (msToken) {
-      await this.microsoftMail.untrashMessage(msToken, emailId);
-      return { ok: true, provider: 'microsoft' as const };
-    }
-
+    // Always update local record
     await this.repo.update({ id: emailId }, { isTrashed: false });
-    return { ok: true, provider: 'local' as const };
+    return { ok: true, provider: externalId ? 'provider' as const : 'local' as const };
   }
 
   async permanentDeleteEmail(userId: string, emailId: string) {
-    const accessToken = await this.gmail.getAccessTokenForUser(userId);
-    if (accessToken) {
-      await this.gmail.permanentlyDeleteMessage(accessToken, emailId);
-    } else {
-      const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-      if (msToken) {
-        // For Microsoft, calling deleteMessage on a Deleted Items message permanently removes it
-        await this.microsoftMail.deleteMessage(msToken, emailId);
+    // emailId is a local DB UUID — look up externalId to call provider API
+    const local = await this.repo.findOne({ where: { id: emailId } });
+    const externalId = local?.externalId ?? null;
+
+    if (externalId) {
+      const accessToken = await this.gmail.getAccessTokenForUser(userId);
+      if (accessToken) {
+        await this.gmail.permanentlyDeleteMessage(accessToken, externalId);
       } else {
-        await this.repo.delete({ id: emailId });
+        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+        if (msToken) {
+          // For Microsoft, deleteMessage on a Deleted Items message permanently removes it
+          await this.microsoftMail.deleteMessage(msToken, externalId);
+        }
       }
     }
+
+    // Always hard-delete the local record
+    await this.repo.delete({ id: emailId });
     await this.insightsRepo.delete({ userId, emailId });
     await this.draftsRepo.delete({ emailId });
     return { ok: true };
   }
 
   async deleteEmail(userId: string, emailId: string) {
-    // Try Gmail — move to trash
+    // Try Gmail — cache locally then move to trash in provider
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
     if (accessToken) {
+      try {
+        const email = await this.gmail.getMessage(accessToken, emailId);
+        await this.saveLocalCopy(email, emailId, true, false);
+      } catch (err) {
+        this.log.warn(`Could not cache Gmail email ${emailId} before trashing: ${err}`);
+      }
       await this.gmail.trashMessage(accessToken, emailId);
     } else {
       const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
       if (msToken) {
+        try {
+          const email = await this.microsoftMail.getMessage(msToken, emailId);
+          await this.saveLocalCopy(email, emailId, true, false);
+        } catch (err) {
+          this.log.warn(`Could not cache Microsoft email ${emailId} before trashing: ${err}`);
+        }
         await this.microsoftMail.deleteMessage(msToken, emailId);
       } else {
         await this.repo.update({ id: emailId }, { isTrashed: true });
@@ -364,6 +366,38 @@ export class EmailsService {
     await this.draftsRepo.delete({ emailId });
 
     return { ok: true };
+  }
+
+  /**
+   * Save a local copy of a provider email so trash/sent views always work
+   * from the DB, independent of provider API availability.
+   * If a record with the same externalId already exists, just updates its flags.
+   */
+  private async saveLocalCopy(
+    email: ParsedEmail,
+    externalId: string,
+    isTrashed: boolean,
+    isSent: boolean,
+  ): Promise<void> {
+    const existing = await this.repo.findOne({ where: { externalId } });
+    if (existing) {
+      await this.repo.update({ id: existing.id }, { isTrashed, isSent });
+      return;
+    }
+    await this.repo.save(
+      this.repo.create({
+        from: email.from,
+        to: email.to ?? '',
+        subject: email.subject,
+        snippet: email.snippet,
+        body: email.body,
+        isRead: email.isRead,
+        isSent,
+        isTrashed,
+        receivedAt: email.receivedAt,
+        externalId,
+      }),
+    );
   }
 
   private async attachInsights<T extends { id: string }>(userId: string, emails: T[]) {
