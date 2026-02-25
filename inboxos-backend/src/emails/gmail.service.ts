@@ -300,22 +300,29 @@ export class GmailService {
   ): Promise<ParsedEmail[]> {
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
-    params.set('labelIds', 'SENT');
-    if (options.search) params.set('q', options.search);
+    const qParts = ['in:sent'];
+    if (options.search) qParts.push(options.search);
+    params.set('q', qParts.join(' '));
 
     const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
     const listRes = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    if (!listRes.ok) {
+      const err = await listRes.json().catch(() => ({}));
+      throw new Error((err as any).error?.message ?? `Gmail sent list failed: ${listRes.status}`);
+    }
     const listData = await listRes.json();
     if (!listData.messages) return [];
 
-    const messages = await Promise.all(
+    const results = await Promise.allSettled(
       listData.messages.map((m: { id: string }) =>
         this.fetchAndParse(accessToken, m.id),
       ),
     );
-    return messages;
+    return results
+      .filter((r): r is PromiseFulfilledResult<ParsedEmail> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 
   async listTrashEmails(
@@ -324,22 +331,31 @@ export class GmailService {
   ): Promise<ParsedEmail[]> {
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
-    params.set('labelIds', 'TRASH');
-    if (options.search) params.set('q', options.search);
+    // Use Gmail search operator for reliable trash querying (labelIds=TRASH has propagation delays)
+    const qParts = ['in:trash'];
+    if (options.search) qParts.push(options.search);
+    params.set('q', qParts.join(' '));
 
     const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
     const listRes = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    if (!listRes.ok) {
+      const err = await listRes.json().catch(() => ({}));
+      throw new Error((err as any).error?.message ?? `Gmail trash list failed: ${listRes.status}`);
+    }
     const listData = await listRes.json();
     if (!listData.messages) return [];
 
-    const messages = await Promise.all(
+    // Use allSettled so a single failed fetch doesn't wipe the entire list
+    const results = await Promise.allSettled(
       listData.messages.map((m: { id: string }) =>
         this.fetchAndParse(accessToken, m.id),
       ),
     );
-    return messages;
+    return results
+      .filter((r): r is PromiseFulfilledResult<ParsedEmail> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 
   async untrashMessage(accessToken: string, messageId: string): Promise<void> {

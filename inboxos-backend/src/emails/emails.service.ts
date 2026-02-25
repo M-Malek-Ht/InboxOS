@@ -234,18 +234,26 @@ export class EmailsService {
   ) {
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
     if (accessToken) {
-      return this.gmail.listSentEmails(accessToken, {
-        maxResults: options.limit,
-        search: options.search,
-      });
+      try {
+        return await this.gmail.listSentEmails(accessToken, {
+          maxResults: options.limit,
+          search: options.search,
+        });
+      } catch (error) {
+        this.log.error(`Gmail sent list error: ${error}`);
+      }
     }
 
     const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
     if (msToken) {
-      return this.microsoftMail.listSentEmails(msToken, {
-        maxResults: options.limit,
-        search: options.search,
-      });
+      try {
+        return await this.microsoftMail.listSentEmails(msToken, {
+          maxResults: options.limit,
+          search: options.search,
+        });
+      } catch (error) {
+        this.log.error(`Microsoft sent list error: ${error}`);
+      }
     }
 
     const qb = this.repo.createQueryBuilder('email');
@@ -267,18 +275,26 @@ export class EmailsService {
   ) {
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
     if (accessToken) {
-      return this.gmail.listTrashEmails(accessToken, {
-        maxResults: options.limit,
-        search: options.search,
-      });
+      try {
+        return await this.gmail.listTrashEmails(accessToken, {
+          maxResults: options.limit,
+          search: options.search,
+        });
+      } catch (error) {
+        this.log.error(`Gmail trash list error: ${error}`);
+      }
     }
 
     const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
     if (msToken) {
-      return this.microsoftMail.listTrashEmails(msToken, {
-        maxResults: options.limit,
-        search: options.search,
-      });
+      try {
+        return await this.microsoftMail.listTrashEmails(msToken, {
+          maxResults: options.limit,
+          search: options.search,
+        });
+      } catch (error) {
+        this.log.error(`Microsoft trash list error: ${error}`);
+      }
     }
 
     const qb = this.repo.createQueryBuilder('email');
