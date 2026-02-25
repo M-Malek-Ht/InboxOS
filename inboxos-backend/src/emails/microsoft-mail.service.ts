@@ -71,7 +71,7 @@ export class MicrosoftMailService {
       params.set('$search', `"${options.search}"`);
     }
 
-    const url = `https://graph.microsoft.com/v1.0/me/messages?${params.toString()}`;
+    const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?${params.toString()}`;
     console.log('[MicrosoftMailService] Fetching emails from:', url);
 
     const res = await fetch(url, {
