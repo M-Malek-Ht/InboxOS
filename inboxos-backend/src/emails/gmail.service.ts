@@ -368,6 +368,18 @@ export class GmailService {
     }
   }
 
+  async permanentlyDeleteMessage(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok && res.status !== 204) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error((error as any).error?.message ?? 'Failed to permanently delete message');
+    }
+  }
+
   // ── internals ───────────────────────────────────────
 
   private async fetchAndParse(accessToken: string, messageId: string): Promise<ParsedEmail> {

@@ -311,6 +311,24 @@ export class EmailsService {
     return { ok: true, provider: 'local' as const };
   }
 
+  async permanentDeleteEmail(userId: string, emailId: string) {
+    const accessToken = await this.gmail.getAccessTokenForUser(userId);
+    if (accessToken) {
+      await this.gmail.permanentlyDeleteMessage(accessToken, emailId);
+    } else {
+      const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+      if (msToken) {
+        // For Microsoft, calling deleteMessage on a Deleted Items message permanently removes it
+        await this.microsoftMail.deleteMessage(msToken, emailId);
+      } else {
+        await this.repo.delete({ id: emailId });
+      }
+    }
+    await this.insightsRepo.delete({ userId, emailId });
+    await this.draftsRepo.delete({ emailId });
+    return { ok: true };
+  }
+
   async deleteEmail(userId: string, emailId: string) {
     // Try Gmail — move to trash
     const accessToken = await this.gmail.getAccessTokenForUser(userId);

@@ -115,6 +115,12 @@ export class EmailsController {
     return { jobId, count: items.length };
   }
 
+  @Delete(':id/permanent')
+  @UseGuards(JwtAuthGuard)
+  async permanentDelete(@Param('id') id: string, @Request() req: any) {
+    return this.emails.permanentDeleteEmail(req.user.id, id);
+  }
+
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
   async delete(@Param('id') id: string, @Request() req: any) {

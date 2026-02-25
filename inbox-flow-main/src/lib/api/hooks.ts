@@ -278,6 +278,17 @@ export function useUntrashEmail() {
   });
 }
 
+// Permanently delete from trash
+export function usePermanentlyDeleteEmail() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (emailId: string) => api.permanentlyDeleteEmail(emailId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['trash-emails'] });
+    },
+  });
+}
+
 // Extract dates hook
 export function useExtractDates() {
   return useMutation({

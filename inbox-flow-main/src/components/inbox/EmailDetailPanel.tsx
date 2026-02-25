@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread, useDeleteEmail, useUntrashEmail } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread, useDeleteEmail, useUntrashEmail, usePermanentlyDeleteEmail } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -43,6 +43,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
   const extractDates = useExtractDates();
   const deleteEmail = useDeleteEmail();
   const untrashEmail = useUntrashEmail();
+  const permanentlyDeleteEmail = usePermanentlyDeleteEmail();
   const { data: threadMessages } = useThread(mode === 'inbox' ? (email?.id ?? null) : null);
 
   const { data: classifyJob } = useJob(classifyJobId);
@@ -141,6 +142,17 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
     }
   };
 
+  const handlePermanentDelete = async () => {
+    if (!email) return;
+    try {
+      await permanentlyDeleteEmail.mutateAsync(email.id);
+      toast.success('Email permanently deleted');
+      onClose();
+    } catch {
+      toast.error('Failed to permanently delete email');
+    }
+  };
+
   if (!email && !isLoading) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -177,15 +189,28 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
           </h2>
           <div className="flex items-center gap-1 flex-shrink-0">
             {mode === 'trash' && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleUntrash}
-                disabled={untrashEmail.isPending}
-                className="text-muted-foreground hover:text-green-600"
-              >
-                <ArchiveRestore className="h-5 w-5" />
-              </Button>
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleUntrash}
+                  disabled={untrashEmail.isPending || permanentlyDeleteEmail.isPending}
+                  title="Restore to inbox"
+                  className="text-muted-foreground hover:text-green-600"
+                >
+                  <ArchiveRestore className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handlePermanentDelete}
+                  disabled={permanentlyDeleteEmail.isPending || untrashEmail.isPending}
+                  title="Delete permanently"
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </>
             )}
             {mode === 'inbox' && (
               <Button
