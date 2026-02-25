@@ -72,20 +72,17 @@ export class EmailsService {
     console.log('[EmailsService] Falling back to seed data');
     await this.seedIfEmpty();
     const qb = this.repo.createQueryBuilder('email');
+    qb.where('email.isTrashed = false').andWhere('email.isSent = false');
 
     if (options.search) {
-      qb.where(
+      qb.andWhere(
         'email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q',
         { q: `%${options.search}%` },
       );
     }
 
     if (options.filter === 'unread') {
-      if (qb.expressionMap.wheres.length === 0) {
-        qb.where('email.isRead = false');
-      } else {
-        qb.andWhere('email.isRead = false');
-      }
+      qb.andWhere('email.isRead = false');
     }
 
     qb.orderBy('email.receivedAt', 'DESC');
@@ -206,7 +203,29 @@ export class EmailsService {
       return { ok: true, provider: 'microsoft' as const };
     }
 
-    throw new Error('No email provider linked — cannot send reply');
+    // Local fallback (no provider linked): persist a synthetic sent item.
+    const original = await this.repo.findOne({ where: { id: emailId } });
+    const user = await this.usersRepo.findOne({ where: { id: userId } });
+    if (!original || !user) {
+      throw new Error('No email provider linked and local email context missing');
+    }
+
+    const subject = original.subject.startsWith('Re:')
+      ? original.subject
+      : `Re: ${original.subject}`;
+    await this.repo.save(
+      this.repo.create({
+        from: user.email,
+        to: original.from,
+        subject,
+        snippet: body.slice(0, 180),
+        body,
+        isRead: true,
+        isSent: true,
+        isTrashed: false,
+      }),
+    );
+    return { ok: true, provider: 'local' as const };
   }
 
   async listSentForUser(
@@ -229,7 +248,17 @@ export class EmailsService {
       });
     }
 
-    return [];
+    const qb = this.repo.createQueryBuilder('email');
+    qb.where('email.isSent = true').andWhere('email.isTrashed = false');
+    if (options.search) {
+      qb.andWhere(
+        'email.subject ILIKE :q OR email.to ILIKE :q OR email.snippet ILIKE :q',
+        { q: `%${options.search}%` },
+      );
+    }
+    qb.orderBy('email.receivedAt', 'DESC');
+    if (options.limit) qb.take(options.limit);
+    return qb.getMany();
   }
 
   async listTrashForUser(
@@ -252,7 +281,17 @@ export class EmailsService {
       });
     }
 
-    return [];
+    const qb = this.repo.createQueryBuilder('email');
+    qb.where('email.isTrashed = true');
+    if (options.search) {
+      qb.andWhere(
+        'email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q',
+        { q: `%${options.search}%` },
+      );
+    }
+    qb.orderBy('email.receivedAt', 'DESC');
+    if (options.limit) qb.take(options.limit);
+    return qb.getMany();
   }
 
   async untrashEmail(userId: string, emailId: string) {
@@ -268,7 +307,8 @@ export class EmailsService {
       return { ok: true, provider: 'microsoft' as const };
     }
 
-    return { ok: false };
+    await this.repo.update({ id: emailId }, { isTrashed: false });
+    return { ok: true, provider: 'local' as const };
   }
 
   async deleteEmail(userId: string, emailId: string) {
@@ -281,7 +321,7 @@ export class EmailsService {
       if (msToken) {
         await this.microsoftMail.deleteMessage(msToken, emailId);
       } else {
-        await this.repo.delete({ id: emailId });
+        await this.repo.update({ id: emailId }, { isTrashed: true });
       }
     }
 

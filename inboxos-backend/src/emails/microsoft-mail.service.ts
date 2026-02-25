@@ -57,7 +57,7 @@ export class MicrosoftMailService {
     const params = new URLSearchParams();
     params.set('$top', String(top));
     params.set('$orderby', 'receivedDateTime desc');
-    params.set('$select', 'id,from,subject,bodyPreview,body,receivedDateTime,isRead');
+    params.set('$select', 'id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead');
 
     const filterParts: string[] = [];
     if (options.filter === 'unread') {
@@ -78,6 +78,7 @@ export class MicrosoftMailService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        ...(options.search ? { ConsistencyLevel: 'eventual' } : {}),
       },
     });
 
@@ -96,7 +97,7 @@ export class MicrosoftMailService {
 
   async getMessage(accessToken: string, messageId: string): Promise<ParsedEmail> {
     console.log('[MicrosoftMailService] getMessage called with messageId:', messageId);
-    const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}?$select=id,from,subject,bodyPreview,body,receivedDateTime,isRead`;
+    const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}?$select=id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead`;
 
     const res = await fetch(url, {
       headers: {
@@ -155,21 +156,75 @@ export class MicrosoftMailService {
   // ── sent / trash listing (stubs) ────────────────────
 
   async listSentEmails(
-    _accessToken: string,
-    _options: { maxResults?: number; search?: string } = {},
+    accessToken: string,
+    options: { maxResults?: number; search?: string } = {},
   ): Promise<ParsedEmail[]> {
-    return [];
+    const top = options.maxResults ?? 40;
+    const params = new URLSearchParams();
+    params.set('$top', String(top));
+    params.set('$orderby', 'receivedDateTime desc');
+    params.set('$select', 'id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead');
+    if (options.search) params.set('$search', `"${options.search}"`);
+
+    const url = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        ...(options.search ? { ConsistencyLevel: 'eventual' } : {}),
+      },
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      throw new Error(data.error.message ?? 'Failed to list sent emails');
+    }
+
+    return (data.value ?? []).map((msg: any) => this.parseMessage(msg, true));
   }
 
   async listTrashEmails(
-    _accessToken: string,
-    _options: { maxResults?: number; search?: string } = {},
+    accessToken: string,
+    options: { maxResults?: number; search?: string } = {},
   ): Promise<ParsedEmail[]> {
-    return [];
+    const top = options.maxResults ?? 40;
+    const params = new URLSearchParams();
+    params.set('$top', String(top));
+    params.set('$orderby', 'receivedDateTime desc');
+    params.set('$select', 'id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead');
+    if (options.search) params.set('$search', `"${options.search}"`);
+
+    const url = `https://graph.microsoft.com/v1.0/me/mailFolders/deleteditems/messages?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        ...(options.search ? { ConsistencyLevel: 'eventual' } : {}),
+      },
+    });
+
+    const data = await res.json();
+    if (data.error) {
+      throw new Error(data.error.message ?? 'Failed to list trash emails');
+    }
+
+    return (data.value ?? []).map((msg: any) => this.parseMessage(msg));
   }
 
-  async untrashMessage(_accessToken: string, _messageId: string): Promise<void> {
-    // Not implemented for Microsoft yet
+  async untrashMessage(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}/move`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ destinationId: 'inbox' }),
+    });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error((error as any).error?.message ?? 'Failed to restore message');
+    }
   }
 
   // ── delete ──────────────────────────────────────────
@@ -209,20 +264,26 @@ export class MicrosoftMailService {
     console.log('[MicrosoftMailService] Email read state updated:', isRead ? 'read' : 'unread');
   }
 
-  private parseMessage(msg: any): ParsedEmail {
+  private parseMessage(msg: any, isSent = false): ParsedEmail {
     const fromAddress = msg.from?.emailAddress;
     const fromStr = fromAddress
       ? (fromAddress.name ? `${fromAddress.name} <${fromAddress.address}>` : fromAddress.address)
+      : '';
+    const toAddress = msg.toRecipients?.[0]?.emailAddress;
+    const toStr = toAddress
+      ? (toAddress.name ? `${toAddress.name} <${toAddress.address}>` : toAddress.address)
       : '';
 
     return {
       id: msg.id,
       from: fromStr,
+      to: toStr,
       subject: msg.subject ?? '',
       snippet: msg.bodyPreview ?? '',
       body: msg.body?.content ?? '',
       receivedAt: new Date(msg.receivedDateTime),
       isRead: msg.isRead ?? false,
+      isSent,
     };
   }
 }

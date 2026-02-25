@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Email } from '@/lib/types';
-import { useSentEmails, useEmail } from '@/lib/api/hooks';
+import { useSentEmails } from '@/lib/api/hooks';
 import { EmailDetailPanel } from '@/components/inbox/EmailDetailPanel';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -19,7 +19,7 @@ export default function SentPage() {
     limit: 40,
   });
 
-  const { data: selectedEmail, isLoading: emailLoading } = useEmail(selectedId);
+  const selectedEmail = emails?.find((e: Email) => e.id === selectedId) ?? null;
 
   const handleSelect = useCallback((email: Email) => {
     setSelectedId(email.id);
@@ -116,8 +116,8 @@ export default function SentPage() {
           <AnimatePresence mode="wait">
             <EmailDetailPanel
               key="detail"
-              email={selectedEmail || null}
-              isLoading={emailLoading}
+              email={selectedEmail}
+              isLoading={false}
               onClose={handleClose}
               mode="sent"
             />

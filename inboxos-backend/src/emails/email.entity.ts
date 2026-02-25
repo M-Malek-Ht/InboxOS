@@ -8,6 +8,9 @@ export class EmailEntity {
   @Column()
   from: string;
 
+  @Column({ default: '' })
+  to: string;
+
   @Column()
   subject: string;
 
@@ -19,6 +22,12 @@ export class EmailEntity {
 
   @Column({ default: false })
   isRead: boolean;
+
+  @Column({ default: false })
+  isSent: boolean;
+
+  @Column({ default: false })
+  isTrashed: boolean;
 
   @CreateDateColumn()
   receivedAt: Date;

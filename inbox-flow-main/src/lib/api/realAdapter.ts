@@ -19,8 +19,9 @@ function stripHtml(html: string): string {
 }
 
 function mapEmail(e: any) {
-  // Parse "Name <email@example.com>" or just "email@example.com"
-  const fromRaw = e.from ?? 'Unknown';
+  // Sent items are shown from the recipient perspective ("To: ...").
+  const senderOrRecipientRaw = (e.isSent && e.to ? e.to : e.from) ?? 'Unknown';
+  const fromRaw = senderOrRecipientRaw;
   let fromName = fromRaw;
   let fromEmail = fromRaw;
 

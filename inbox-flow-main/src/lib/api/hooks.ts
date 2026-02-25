@@ -93,6 +93,8 @@ export function useSendReply() {
       api.sendReply(emailId, body, draftId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-emails'] });
+      queryClient.invalidateQueries({ queryKey: ['thread'] });
     },
   });
 }
@@ -103,6 +105,8 @@ export function useDeleteEmail() {
     mutationFn: (emailId: string) => api.deleteEmail(emailId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: ['trash-emails'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-emails'] });
     },
   });
 }
