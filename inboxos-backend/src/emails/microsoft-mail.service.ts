@@ -1,32 +1,24 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from '../auth/account.entity';
-import { ParsedEmail } from './gmail.service';
+import { ParsedEmail } from './email.types';
+import { EmailProviderService } from './email-provider.service';
 
 @Injectable()
-export class MicrosoftMailService {
+export class MicrosoftMailService extends EmailProviderService {
   constructor(
     @InjectRepository(Account)
-    private accountRepo: Repository<Account>,
-    private configService: ConfigService,
-  ) {}
+    accountRepo: Repository<Account>,
+    configService: ConfigService,
+  ) {
+    super(accountRepo, configService);
+  }
 
   // ── token management ────────────────────────────────
 
-  async getAccessTokenForUser(userId: string): Promise<string | null> {
-    console.log('[MicrosoftMailService] Looking for account with userId:', userId);
-    const account = await this.accountRepo.findOne({
-      where: { userId, provider: 'microsoft' },
-    });
-    console.log('[MicrosoftMailService] Account found:', account ? 'YES' : 'NO');
-    console.log('[MicrosoftMailService] Has refreshToken:', account?.refreshToken ? 'YES' : 'NO');
-    if (!account?.refreshToken) return null;
-    return this.refreshAccessToken(account.refreshToken);
-  }
-
-  private async refreshAccessToken(refreshToken: string): Promise<string> {
+  protected async refreshAccessToken(refreshToken: string): Promise<string> {
     const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -41,7 +33,7 @@ export class MicrosoftMailService {
 
     const data = await res.json();
     if (!data.access_token) {
-      console.error('[MicrosoftMailService] Token refresh failed:', data);
+      this.log.error('Token refresh failed:', data);
       throw new Error('Failed to refresh Microsoft access token');
     }
     return data.access_token as string;
@@ -72,7 +64,7 @@ export class MicrosoftMailService {
     }
 
     const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?${params.toString()}`;
-    console.log('[MicrosoftMailService] Fetching emails from:', url);
+    this.log.log('Fetching emails from:', url);
 
     const res = await fetch(url, {
       headers: {
@@ -82,21 +74,21 @@ export class MicrosoftMailService {
       },
     });
 
-    console.log('[MicrosoftMailService] Graph API response status:', res.status);
+    this.log.log('Graph API response status:', res.status);
     const data = await res.json();
 
     if (data.error) {
-      console.error('[MicrosoftMailService] Graph API error:', data.error);
+      this.log.error('Graph API error:', data.error);
       throw new Error(data.error.message);
     }
 
     const messages = data.value ?? [];
-    console.log('[MicrosoftMailService] Found', messages.length, 'messages');
+    this.log.log('Found', messages.length, 'messages');
     return messages.map((msg: any) => this.parseMessage(msg));
   }
 
   async getMessage(accessToken: string, messageId: string): Promise<ParsedEmail> {
-    console.log('[MicrosoftMailService] getMessage called with messageId:', messageId);
+    this.log.log('getMessage called with messageId:', messageId);
     const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}?$select=id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead`;
 
     const res = await fetch(url, {
@@ -106,11 +98,11 @@ export class MicrosoftMailService {
       },
     });
 
-    console.log('[MicrosoftMailService] getMessage response status:', res.status);
+    this.log.log('getMessage response status:', res.status);
     const msg = await res.json();
 
     if (msg.error) {
-      console.error('[MicrosoftMailService] getMessage error:', msg.error);
+      this.log.error('getMessage error:', msg.error);
       throw new Error(msg.error.message);
     }
 
@@ -118,12 +110,12 @@ export class MicrosoftMailService {
   }
 
   async markAsRead(accessToken: string, messageId: string): Promise<void> {
-    console.log('[MicrosoftMailService] markAsRead called with messageId:', messageId);
+    this.log.log('markAsRead called with messageId:', messageId);
     await this.setReadState(accessToken, messageId, true);
   }
 
   async markAsUnread(accessToken: string, messageId: string): Promise<void> {
-    console.log('[MicrosoftMailService] markAsUnread called with messageId:', messageId);
+    this.log.log('markAsUnread called with messageId:', messageId);
     await this.setReadState(accessToken, messageId, false);
   }
 
@@ -257,11 +249,11 @@ export class MicrosoftMailService {
 
     if (!res.ok) {
       const error = await res.json();
-      console.error('[MicrosoftMailService] setReadState error:', error);
+      this.log.error('setReadState error:', error);
       throw new Error(error.error?.message ?? 'Failed to update read state');
     }
 
-    console.log('[MicrosoftMailService] Email read state updated:', isRead ? 'read' : 'unread');
+    this.log.log('Email read state updated:', isRead ? 'read' : 'unread');
   }
 
   private parseMessage(msg: any, isSent = false): ParsedEmail {

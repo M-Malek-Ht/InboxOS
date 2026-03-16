@@ -5,7 +5,8 @@ import { EmailEntity } from './email.entity';
 import { EmailInsightEntity } from './email-insight.entity';
 import { DraftEntity } from '../drafts/draft.entity';
 import { User } from '../users/entities/user.entity';
-import { GmailService, ParsedEmail } from './gmail.service';
+import { GmailService } from './gmail.service';
+import { ParsedEmail } from './email.types';
 import { MicrosoftMailService } from './microsoft-mail.service';
 
 @Injectable()
@@ -25,6 +26,22 @@ export class EmailsService {
     private readonly microsoftMail: MicrosoftMailService,
   ) {}
 
+  private async getAccessTokenOrFallback(userId: string): Promise<{ token: string; provider: 'gmail' | 'microsoft' } | null> {
+    // Try Gmail first
+    const gmailToken = await this.gmail.getAccessTokenForUser(userId);
+    if (gmailToken) {
+      return { token: gmailToken, provider: 'gmail' };
+    }
+
+    // Try Microsoft
+    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+    if (msToken) {
+      return { token: msToken, provider: 'microsoft' };
+    }
+
+    return null;
+  }
+
   async listForUser(
     userId: string,
     options: { filter?: string; search?: string; limit?: number } = {},
@@ -35,41 +52,26 @@ export class EmailsService {
     const userEmail = user?.email?.toLowerCase();
     this.log.log(`listForUser: userId=${userId}, userEmail=${userEmail}`);
 
-    const accessToken = await this.gmail.getAccessTokenForUser(userId);
-    if (accessToken) {
+    const tokenResult = await this.getAccessTokenOrFallback(userId);
+    if (tokenResult) {
+      const { token, provider } = tokenResult;
       try {
-        const emails = await this.gmail.listEmails(accessToken, {
+        const service = provider === 'gmail' ? this.gmail : this.microsoftMail;
+        const emails = await service.listEmails(token, {
           maxResults: options.limit,
           filter: options.filter,
           search: options.search,
-          userEmail,
+          userEmail: provider === 'gmail' ? userEmail : undefined,
         });
-        this.log.log(`Gmail returned ${emails.length} emails`);
+        this.log.log(`${provider} returned ${emails.length} emails`);
         return this.attachInsights(userId, emails);
       } catch (error) {
-        this.log.error(`Gmail API error: ${error}`);
-      }
-    }
-
-    // Try Microsoft Graph
-    const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-    console.log('[EmailsService] Microsoft accessToken:', msToken ? 'YES' : 'NO');
-    if (msToken) {
-      try {
-        const emails = await this.microsoftMail.listEmails(msToken, {
-          maxResults: options.limit,
-          filter: options.filter,
-          search: options.search,
-        });
-        console.log('[EmailsService] Microsoft returned', emails.length, 'emails');
-        return this.attachInsights(userId, emails);
-      } catch (error) {
-        console.error('[EmailsService] Microsoft Graph API error:', error);
+        this.log.error(`${provider} API error: ${error}`);
       }
     }
 
     // No provider linked — fall back to seed data
-    console.log('[EmailsService] Falling back to seed data');
+    this.log.log('Falling back to seed data');
     await this.seedIfEmpty();
     const qb = this.repo.createQueryBuilder('email');
     qb.where('email.isTrashed = false').andWhere('email.isSent = false');

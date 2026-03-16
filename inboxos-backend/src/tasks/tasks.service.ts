@@ -4,13 +4,16 @@ import { Repository } from 'typeorm';
 import { TaskEntity } from './task.entity';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { BaseEntityService } from '../base-entity.service';
 
 @Injectable()
-export class TasksService {
+export class TasksService extends BaseEntityService<TaskEntity, CreateTaskDto, UpdateTaskDto> {
   constructor(
     @InjectRepository(TaskEntity)
-    private readonly repo: Repository<TaskEntity>,
-  ) {}
+    repo: Repository<TaskEntity>,
+  ) {
+    super(repo);
+  }
 
   list() {
     return this.repo.find({ order: { createdAt: 'DESC' } });
@@ -39,10 +42,3 @@ export class TasksService {
 
     return this.repo.save(task);
   }
-
-  async remove(id: string) {
-    const res = await this.repo.delete({ id });
-    if (res.affected === 0) throw new NotFoundException('Task not found');
-    return { ok: true };
-  }
-}

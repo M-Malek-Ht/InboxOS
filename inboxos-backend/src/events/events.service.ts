@@ -4,13 +4,16 @@ import { Repository } from 'typeorm';
 import { EventEntity } from './event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { BaseEntityService } from '../base-entity.service';
 
 @Injectable()
-export class EventsService {
+export class EventsService extends BaseEntityService<EventEntity, CreateEventDto, UpdateEventDto> {
   constructor(
     @InjectRepository(EventEntity)
-    private readonly repo: Repository<EventEntity>,
-  ) {}
+    repo: Repository<EventEntity>,
+  ) {
+    super(repo);
+  }
 
   list(from?: string, to?: string) {
     // Simple version for now: return all
@@ -41,10 +44,3 @@ export class EventsService {
 
     return this.repo.save(event);
   }
-
-  async remove(id: string) {
-    const res = await this.repo.delete({ id });
-    if (res.affected === 0) throw new NotFoundException('Event not found');
-    return { ok: true };
-  }
-}
