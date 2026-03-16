@@ -3,43 +3,26 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from '../auth/account.entity';
-
-export interface ParsedEmail {
-  id: string;
-  from: string;
-  subject: string;
-  snippet: string;
-  body: string;
-  receivedAt: Date;
-  isRead: boolean;
-  threadId?: string;
-  to?: string;
-  messageIdHeader?: string;
-  labelIds?: string[];
-  isSent?: boolean;
-}
+import { ParsedEmail } from './email.types';
+import { EmailProviderService } from './email-provider.service';
 
 @Injectable()
-export class GmailService {
-  private readonly log = new Logger(GmailService.name);
+export class GmailService extends EmailProviderService {
+  get providerName(): string {
+    return 'google';
+  }
 
   constructor(
     @InjectRepository(Account)
-    private accountRepo: Repository<Account>,
-    private configService: ConfigService,
-  ) {}
+    accountRepo: Repository<Account>,
+    configService: ConfigService,
+  ) {
+    super(accountRepo, configService);
+  }
 
   // ── token management ────────────────────────────────
 
-  async getAccessTokenForUser(userId: string): Promise<string | null> {
-    const account = await this.accountRepo.findOne({
-      where: { userId, provider: 'google' },
-    });
-    if (!account?.refreshToken) return null;
-    return this.refreshAccessToken(account.refreshToken);
-  }
-
-  private async refreshAccessToken(refreshToken: string): Promise<string> {
+  protected async refreshAccessToken(refreshToken: string): Promise<string> {
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
