@@ -1,13 +1,10 @@
 import { EventsService } from './events.service';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-export declare class EventsController {
+import { BaseCrudController } from '../base-crud.controller';
+import { EventEntity } from './event.entity';
+export declare class EventsController extends BaseCrudController<EventEntity, CreateEventDto, UpdateEventDto> {
     private readonly events;
     constructor(events: EventsService);
-    list(from?: string, to?: string): Promise<import("./event.entity").EventEntity[]>;
-    create(dto: CreateEventDto): Promise<import("./event.entity").EventEntity>;
-    update(id: string, dto: UpdateEventDto): Promise<import("./event.entity").EventEntity>;
-    remove(id: string): Promise<{
-        ok: boolean;
-    }>;
+    list(from?: string, to?: string): Promise<EventEntity[]>;
 }

@@ -17,10 +17,10 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const task_entity_1 = require("./task.entity");
-let TasksService = class TasksService {
-    repo;
+const base_entity_service_1 = require("../base-entity.service");
+let TasksService = class TasksService extends base_entity_service_1.BaseEntityService {
     constructor(repo) {
-        this.repo = repo;
+        super(repo);
     }
     list() {
         return this.repo.find({ order: { createdAt: 'DESC' } });
@@ -29,8 +29,8 @@ let TasksService = class TasksService {
         const task = this.repo.create({
             title: dto.title,
             description: dto.description ?? '',
-            status: dto.status ?? 'todo',
-            priority: dto.priority ?? 'medium',
+            status: dto.status ?? 'Backlog',
+            priority: dto.priority ?? 'Med',
             dueDate: dto.dueDate ? new Date(dto.dueDate) : null,
         });
         return this.repo.save(task);
@@ -50,12 +50,6 @@ let TasksService = class TasksService {
         if (dto.dueDate !== undefined)
             task.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
         return this.repo.save(task);
-    }
-    async remove(id) {
-        const res = await this.repo.delete({ id });
-        if (res.affected === 0)
-            throw new common_1.NotFoundException('Task not found');
-        return { ok: true };
     }
 };
 exports.TasksService = TasksService;

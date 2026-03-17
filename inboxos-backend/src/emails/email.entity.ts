@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
 @Entity('emails')
 export class EmailEntity {
@@ -29,6 +29,12 @@ export class EmailEntity {
   @Column({ default: false })
   isTrashed: boolean;
 
-  @CreateDateColumn()
+  // Switched from @CreateDateColumn so we can set the original provider date
+  @Column({ type: 'timestamptz', default: () => 'NOW()' })
   receivedAt: Date;
+
+  // For Gmail/Microsoft emails cached locally: stores the provider's message ID
+  // so we can call untrash/delete on the right remote message.
+  @Column({ type: 'varchar', nullable: true, default: null })
+  externalId: string | null;
 }

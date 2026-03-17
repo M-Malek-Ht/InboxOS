@@ -4,11 +4,11 @@ export declare class EmailsController {
     private readonly emails;
     private readonly runner;
     constructor(emails: EmailsService, runner: JobRunnerService);
-    list(req: any, filter?: string, search?: string, limit?: string): Promise<import("./email.entity").EmailEntity[]>;
-    listSent(req: any, search?: string, limit?: string): Promise<import("./gmail.service").ParsedEmail[]>;
-    listTrash(req: any, search?: string, limit?: string): Promise<import("./gmail.service").ParsedEmail[]>;
-    getThread(id: string, req: any): Promise<import("./email.entity").EmailEntity[]>;
-    get(id: string, req: any): Promise<import("./email.entity").EmailEntity>;
+    list(req: any, filter?: string, search?: string, limit?: string): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
+    listSent(req: any, search?: string, limit?: string): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
+    listTrash(req: any, search?: string, limit?: string): Promise<import("./email.entity").EmailEntity[]>;
+    getThread(id: string, req: any): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
+    get(id: string, req: any): Promise<import("./email.entity").EmailEntity | import("./email.types").ParsedEmail>;
     setRead(id: string, body: {
         isRead: boolean;
     }, req: any): Promise<import("./email.entity").EmailEntity | {
@@ -23,18 +23,15 @@ export declare class EmailsController {
         jobId: string;
         count: number;
     }>;
+    permanentDelete(id: string, req: any): Promise<{
+        ok: boolean;
+    }>;
     delete(id: string, req: any): Promise<{
         ok: boolean;
     }>;
     untrash(id: string, req: any): Promise<{
         ok: boolean;
-        provider: "gmail";
-    } | {
-        ok: boolean;
-        provider: "microsoft";
-    } | {
-        ok: boolean;
-        provider?: undefined;
+        provider: "provider" | "local";
     }>;
     reply(id: string, body: {
         body: string;
@@ -45,6 +42,9 @@ export declare class EmailsController {
     } | {
         ok: boolean;
         provider: "microsoft";
+    } | {
+        ok: boolean;
+        provider: "local";
     }>;
     classify(id: string, req: any): Promise<{
         jobId: string;

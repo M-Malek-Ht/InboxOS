@@ -335,6 +335,10 @@ export const api = {
   untrashEmail: async (emailId: string) =>
     http.post<{ ok: boolean }>(`/emails/${emailId}/untrash`, {}),
 
+  // Permanently delete (removes from trash forever)
+  permanentlyDeleteEmail: async (emailId: string) =>
+    http.delete<{ ok: boolean }>(`/emails/${emailId}/permanent`),
+
   // Not yet implemented
   extractDates: async (_emailId: string) => {
     throw new Error('Date extraction is not available in the current backend yet.');

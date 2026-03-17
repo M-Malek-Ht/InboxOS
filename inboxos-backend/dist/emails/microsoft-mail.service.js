@@ -18,23 +18,13 @@ const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const account_entity_1 = require("../auth/account.entity");
-let MicrosoftMailService = class MicrosoftMailService {
-    accountRepo;
-    configService;
+const email_provider_service_1 = require("./email-provider.service");
+let MicrosoftMailService = class MicrosoftMailService extends email_provider_service_1.EmailProviderService {
     constructor(accountRepo, configService) {
-        this.accountRepo = accountRepo;
-        this.configService = configService;
+        super(accountRepo, configService);
     }
-    async getAccessTokenForUser(userId) {
-        console.log('[MicrosoftMailService] Looking for account with userId:', userId);
-        const account = await this.accountRepo.findOne({
-            where: { userId, provider: 'microsoft' },
-        });
-        console.log('[MicrosoftMailService] Account found:', account ? 'YES' : 'NO');
-        console.log('[MicrosoftMailService] Has refreshToken:', account?.refreshToken ? 'YES' : 'NO');
-        if (!account?.refreshToken)
-            return null;
-        return this.refreshAccessToken(account.refreshToken);
+    get providerName() {
+        return 'microsoft';
     }
     async refreshAccessToken(refreshToken) {
         const res = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
@@ -50,7 +40,7 @@ let MicrosoftMailService = class MicrosoftMailService {
         });
         const data = await res.json();
         if (!data.access_token) {
-            console.error('[MicrosoftMailService] Token refresh failed:', data);
+            this.log.error('Token refresh failed:', data);
             throw new Error('Failed to refresh Microsoft access token');
         }
         return data.access_token;
@@ -60,7 +50,7 @@ let MicrosoftMailService = class MicrosoftMailService {
         const params = new URLSearchParams();
         params.set('$top', String(top));
         params.set('$orderby', 'receivedDateTime desc');
-        params.set('$select', 'id,from,subject,bodyPreview,body,receivedDateTime,isRead');
+        params.set('$select', 'id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead');
         const filterParts = [];
         if (options.filter === 'unread') {
             filterParts.push('isRead eq false');
@@ -71,47 +61,48 @@ let MicrosoftMailService = class MicrosoftMailService {
         if (options.search) {
             params.set('$search', `"${options.search}"`);
         }
-        const url = `https://graph.microsoft.com/v1.0/me/messages?${params.toString()}`;
-        console.log('[MicrosoftMailService] Fetching emails from:', url);
+        const url = `https://graph.microsoft.com/v1.0/me/mailFolders/inbox/messages?${params.toString()}`;
+        this.log.log('Fetching emails from:', url);
         const res = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
+                ...(options.search ? { ConsistencyLevel: 'eventual' } : {}),
             },
         });
-        console.log('[MicrosoftMailService] Graph API response status:', res.status);
+        this.log.log('Graph API response status:', res.status);
         const data = await res.json();
         if (data.error) {
-            console.error('[MicrosoftMailService] Graph API error:', data.error);
+            this.log.error('Graph API error:', data.error);
             throw new Error(data.error.message);
         }
         const messages = data.value ?? [];
-        console.log('[MicrosoftMailService] Found', messages.length, 'messages');
+        this.log.log('Found', messages.length, 'messages');
         return messages.map((msg) => this.parseMessage(msg));
     }
     async getMessage(accessToken, messageId) {
-        console.log('[MicrosoftMailService] getMessage called with messageId:', messageId);
-        const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}?$select=id,from,subject,bodyPreview,body,receivedDateTime,isRead`;
+        this.log.log('getMessage called with messageId:', messageId);
+        const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}?$select=id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead`;
         const res = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
         });
-        console.log('[MicrosoftMailService] getMessage response status:', res.status);
+        this.log.log('getMessage response status:', res.status);
         const msg = await res.json();
         if (msg.error) {
-            console.error('[MicrosoftMailService] getMessage error:', msg.error);
+            this.log.error('getMessage error:', msg.error);
             throw new Error(msg.error.message);
         }
         return this.parseMessage(msg);
     }
     async markAsRead(accessToken, messageId) {
-        console.log('[MicrosoftMailService] markAsRead called with messageId:', messageId);
+        this.log.log('markAsRead called with messageId:', messageId);
         await this.setReadState(accessToken, messageId, true);
     }
     async markAsUnread(accessToken, messageId) {
-        console.log('[MicrosoftMailService] markAsUnread called with messageId:', messageId);
+        this.log.log('markAsUnread called with messageId:', messageId);
         await this.setReadState(accessToken, messageId, false);
     }
     async sendReply(accessToken, messageId, body) {
@@ -129,13 +120,64 @@ let MicrosoftMailService = class MicrosoftMailService {
             throw new Error(error.error?.message ?? 'Failed to send reply via Microsoft Graph');
         }
     }
-    async listSentEmails(_accessToken, _options = {}) {
-        return [];
+    async listSentEmails(accessToken, options = {}) {
+        const top = options.maxResults ?? 40;
+        const params = new URLSearchParams();
+        params.set('$top', String(top));
+        params.set('$orderby', 'receivedDateTime desc');
+        params.set('$select', 'id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead');
+        if (options.search)
+            params.set('$search', `"${options.search}"`);
+        const url = `https://graph.microsoft.com/v1.0/me/mailFolders/sentitems/messages?${params.toString()}`;
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                ...(options.search ? { ConsistencyLevel: 'eventual' } : {}),
+            },
+        });
+        const data = await res.json();
+        if (data.error) {
+            throw new Error(data.error.message ?? 'Failed to list sent emails');
+        }
+        return (data.value ?? []).map((msg) => this.parseMessage(msg, true));
     }
-    async listTrashEmails(_accessToken, _options = {}) {
-        return [];
+    async listTrashEmails(accessToken, options = {}) {
+        const top = options.maxResults ?? 40;
+        const params = new URLSearchParams();
+        params.set('$top', String(top));
+        params.set('$orderby', 'receivedDateTime desc');
+        params.set('$select', 'id,from,toRecipients,subject,bodyPreview,body,receivedDateTime,isRead');
+        if (options.search)
+            params.set('$search', `"${options.search}"`);
+        const url = `https://graph.microsoft.com/v1.0/me/mailFolders/deleteditems/messages?${params.toString()}`;
+        const res = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                ...(options.search ? { ConsistencyLevel: 'eventual' } : {}),
+            },
+        });
+        const data = await res.json();
+        if (data.error) {
+            throw new Error(data.error.message ?? 'Failed to list trash emails');
+        }
+        return (data.value ?? []).map((msg) => this.parseMessage(msg));
     }
-    async untrashMessage(_accessToken, _messageId) {
+    async untrashMessage(accessToken, messageId) {
+        const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}/move`;
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ destinationId: 'inbox' }),
+        });
+        if (!res.ok) {
+            const error = await res.json().catch(() => ({}));
+            throw new Error(error.error?.message ?? 'Failed to restore message');
+        }
     }
     async deleteMessage(accessToken, messageId) {
         const url = `https://graph.microsoft.com/v1.0/me/messages/${messageId}`;
@@ -160,24 +202,30 @@ let MicrosoftMailService = class MicrosoftMailService {
         });
         if (!res.ok) {
             const error = await res.json();
-            console.error('[MicrosoftMailService] setReadState error:', error);
+            this.log.error('setReadState error:', error);
             throw new Error(error.error?.message ?? 'Failed to update read state');
         }
-        console.log('[MicrosoftMailService] Email read state updated:', isRead ? 'read' : 'unread');
+        this.log.log('Email read state updated:', isRead ? 'read' : 'unread');
     }
-    parseMessage(msg) {
+    parseMessage(msg, isSent = false) {
         const fromAddress = msg.from?.emailAddress;
         const fromStr = fromAddress
             ? (fromAddress.name ? `${fromAddress.name} <${fromAddress.address}>` : fromAddress.address)
             : '';
+        const toAddress = msg.toRecipients?.[0]?.emailAddress;
+        const toStr = toAddress
+            ? (toAddress.name ? `${toAddress.name} <${toAddress.address}>` : toAddress.address)
+            : '';
         return {
             id: msg.id,
             from: fromStr,
+            to: toStr,
             subject: msg.subject ?? '',
             snippet: msg.bodyPreview ?? '',
             body: msg.body?.content ?? '',
             receivedAt: new Date(msg.receivedDateTime),
             isRead: msg.isRead ?? false,
+            isSent,
         };
     }
 };

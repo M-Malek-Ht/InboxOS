@@ -1,27 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { Account } from '../auth/account.entity';
-export interface ParsedEmail {
-    id: string;
-    from: string;
-    subject: string;
-    snippet: string;
-    body: string;
-    receivedAt: Date;
-    isRead: boolean;
-    threadId?: string;
-    to?: string;
-    messageIdHeader?: string;
-    labelIds?: string[];
-    isSent?: boolean;
-}
-export declare class GmailService {
-    private accountRepo;
-    private configService;
-    private readonly log;
+import { ParsedEmail } from './email.types';
+import { EmailProviderService } from './email-provider.service';
+export declare class GmailService extends EmailProviderService {
+    get providerName(): string;
     constructor(accountRepo: Repository<Account>, configService: ConfigService);
-    getAccessTokenForUser(userId: string): Promise<string | null>;
-    private refreshAccessToken;
+    protected refreshAccessToken(refreshToken: string): Promise<string>;
     listEmails(accessToken: string, options?: {
         maxResults?: number;
         filter?: string;
@@ -54,6 +39,7 @@ export declare class GmailService {
     }): Promise<ParsedEmail[]>;
     untrashMessage(accessToken: string, messageId: string): Promise<void>;
     trashMessage(accessToken: string, messageId: string): Promise<void>;
+    permanentlyDeleteMessage(accessToken: string, messageId: string): Promise<void>;
     private fetchAndParse;
     private setReadState;
     private parseMessage;

@@ -31,12 +31,12 @@ __decorate([
 ], CreateTaskDto.prototype, "description", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)(['todo', 'in_progress', 'done']),
+    (0, class_validator_1.IsIn)(['Backlog', 'In Progress', 'Done']),
     __metadata("design:type", String)
 ], CreateTaskDto.prototype, "status", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsIn)(['low', 'medium', 'high']),
+    (0, class_validator_1.IsIn)(['Low', 'Med', 'High']),
     __metadata("design:type", String)
 ], CreateTaskDto.prototype, "priority", void 0);
 __decorate([

@@ -8,62 +8,22 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TasksController = void 0;
 const common_1 = require("@nestjs/common");
 const tasks_service_1 = require("./tasks.service");
-const create_task_dto_1 = require("./dto/create-task.dto");
-const update_task_dto_1 = require("./dto/update-task.dto");
-let TasksController = class TasksController {
+const base_crud_controller_1 = require("../base-crud.controller");
+let TasksController = class TasksController extends base_crud_controller_1.BaseCrudController {
     tasks;
     constructor(tasks) {
+        super(tasks);
         this.tasks = tasks;
     }
     list() {
         return this.tasks.list();
     }
-    create(dto) {
-        return this.tasks.create(dto);
-    }
-    update(id, dto) {
-        return this.tasks.update(id, dto);
-    }
-    remove(id) {
-        return this.tasks.remove(id);
-    }
 };
 exports.TasksController = TasksController;
-__decorate([
-    (0, common_1.Get)(),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
-    __metadata("design:returntype", void 0)
-], TasksController.prototype, "list", null);
-__decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [create_task_dto_1.CreateTaskDto]),
-    __metadata("design:returntype", void 0)
-], TasksController.prototype, "create", null);
-__decorate([
-    (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, update_task_dto_1.UpdateTaskDto]),
-    __metadata("design:returntype", void 0)
-], TasksController.prototype, "update", null);
-__decorate([
-    (0, common_1.Delete)(':id'),
-    __param(0, (0, common_1.Param)('id')),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
-    __metadata("design:returntype", void 0)
-], TasksController.prototype, "remove", null);
 exports.TasksController = TasksController = __decorate([
     (0, common_1.Controller)('tasks'),
     __metadata("design:paramtypes", [tasks_service_1.TasksService])

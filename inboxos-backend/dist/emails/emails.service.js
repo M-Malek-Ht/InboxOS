@@ -39,55 +39,48 @@ let EmailsService = EmailsService_1 = class EmailsService {
         this.gmail = gmail;
         this.microsoftMail = microsoftMail;
     }
+    async getAccessTokenOrFallback(userId) {
+        const gmailToken = await this.gmail.getAccessTokenForUser(userId);
+        if (gmailToken) {
+            return { token: gmailToken, provider: 'gmail' };
+        }
+        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+        if (msToken) {
+            return { token: msToken, provider: 'microsoft' };
+        }
+        return null;
+    }
     async listForUser(userId, options = {}) {
         const user = await this.usersRepo.findOne({ where: { id: userId } });
         const userEmail = user?.email?.toLowerCase();
         this.log.log(`listForUser: userId=${userId}, userEmail=${userEmail}`);
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
+        const tokenResult = await this.getAccessTokenOrFallback(userId);
+        if (tokenResult) {
+            const { token, provider } = tokenResult;
             try {
-                const emails = await this.gmail.listEmails(accessToken, {
+                const service = provider === 'gmail' ? this.gmail : this.microsoftMail;
+                const emails = await service.listEmails(token, {
                     maxResults: options.limit,
                     filter: options.filter,
                     search: options.search,
-                    userEmail,
+                    userEmail: provider === 'gmail' ? userEmail : undefined,
                 });
-                this.log.log(`Gmail returned ${emails.length} emails`);
+                this.log.log(`${provider} returned ${emails.length} emails`);
                 return this.attachInsights(userId, emails);
             }
             catch (error) {
-                this.log.error(`Gmail API error: ${error}`);
+                this.log.error(`${provider} API error: ${error}`);
             }
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        console.log('[EmailsService] Microsoft accessToken:', msToken ? 'YES' : 'NO');
-        if (msToken) {
-            try {
-                const emails = await this.microsoftMail.listEmails(msToken, {
-                    maxResults: options.limit,
-                    filter: options.filter,
-                    search: options.search,
-                });
-                console.log('[EmailsService] Microsoft returned', emails.length, 'emails');
-                return this.attachInsights(userId, emails);
-            }
-            catch (error) {
-                console.error('[EmailsService] Microsoft Graph API error:', error);
-            }
-        }
-        console.log('[EmailsService] Falling back to seed data');
+        this.log.log('Falling back to seed data');
         await this.seedIfEmpty();
         const qb = this.repo.createQueryBuilder('email');
+        qb.where('email.isTrashed = false').andWhere('email.isSent = false');
         if (options.search) {
-            qb.where('email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
+            qb.andWhere('email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
         }
         if (options.filter === 'unread') {
-            if (qb.expressionMap.wheres.length === 0) {
-                qb.where('email.isRead = false');
-            }
-            else {
-                qb.andWhere('email.isRead = false');
-            }
+            qb.andWhere('email.isRead = false');
         }
         qb.orderBy('email.receivedAt', 'DESC');
         if (options.limit)
@@ -193,72 +186,160 @@ let EmailsService = EmailsService_1 = class EmailsService {
             await this.microsoftMail.sendReply(msToken, emailId, body);
             return { ok: true, provider: 'microsoft' };
         }
-        throw new Error('No email provider linked — cannot send reply');
+        const original = await this.repo.findOne({ where: { id: emailId } });
+        const user = await this.usersRepo.findOne({ where: { id: userId } });
+        if (!original || !user) {
+            throw new Error('No email provider linked and local email context missing');
+        }
+        const subject = original.subject.startsWith('Re:')
+            ? original.subject
+            : `Re: ${original.subject}`;
+        await this.repo.save(this.repo.create({
+            from: user.email,
+            to: original.from,
+            subject,
+            snippet: body.slice(0, 180),
+            body,
+            isRead: true,
+            isSent: true,
+            isTrashed: false,
+        }));
+        return { ok: true, provider: 'local' };
     }
     async listSentForUser(userId, options = {}) {
         const accessToken = await this.gmail.getAccessTokenForUser(userId);
         if (accessToken) {
-            return this.gmail.listSentEmails(accessToken, {
-                maxResults: options.limit,
-                search: options.search,
-            });
+            try {
+                return await this.gmail.listSentEmails(accessToken, {
+                    maxResults: options.limit,
+                    search: options.search,
+                });
+            }
+            catch (error) {
+                this.log.error(`Gmail sent list error: ${error}`);
+            }
         }
         const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
         if (msToken) {
-            return this.microsoftMail.listSentEmails(msToken, {
-                maxResults: options.limit,
-                search: options.search,
-            });
+            try {
+                return await this.microsoftMail.listSentEmails(msToken, {
+                    maxResults: options.limit,
+                    search: options.search,
+                });
+            }
+            catch (error) {
+                this.log.error(`Microsoft sent list error: ${error}`);
+            }
         }
-        return [];
+        const qb = this.repo.createQueryBuilder('email');
+        qb.where('email.isSent = true').andWhere('email.isTrashed = false');
+        if (options.search) {
+            qb.andWhere('email.subject ILIKE :q OR email.to ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
+        }
+        qb.orderBy('email.receivedAt', 'DESC');
+        if (options.limit)
+            qb.take(options.limit);
+        return qb.getMany();
     }
     async listTrashForUser(userId, options = {}) {
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
-            return this.gmail.listTrashEmails(accessToken, {
-                maxResults: options.limit,
-                search: options.search,
-            });
+        const qb = this.repo.createQueryBuilder('email');
+        qb.where('email.isTrashed = true');
+        if (options.search) {
+            qb.andWhere('email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
-            return this.microsoftMail.listTrashEmails(msToken, {
-                maxResults: options.limit,
-                search: options.search,
-            });
-        }
-        return [];
+        qb.orderBy('email.receivedAt', 'DESC');
+        if (options.limit)
+            qb.take(options.limit);
+        return qb.getMany();
     }
     async untrashEmail(userId, emailId) {
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
-            await this.gmail.untrashMessage(accessToken, emailId);
-            return { ok: true, provider: 'gmail' };
+        const local = await this.repo.findOne({ where: { id: emailId } });
+        const externalId = local?.externalId ?? null;
+        if (externalId) {
+            const accessToken = await this.gmail.getAccessTokenForUser(userId);
+            if (accessToken) {
+                await this.gmail.untrashMessage(accessToken, externalId);
+            }
+            else {
+                const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+                if (msToken) {
+                    await this.microsoftMail.untrashMessage(msToken, externalId);
+                }
+            }
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
-            await this.microsoftMail.untrashMessage(msToken, emailId);
-            return { ok: true, provider: 'microsoft' };
+        await this.repo.update({ id: emailId }, { isTrashed: false });
+        return { ok: true, provider: externalId ? 'provider' : 'local' };
+    }
+    async permanentDeleteEmail(userId, emailId) {
+        const local = await this.repo.findOne({ where: { id: emailId } });
+        const externalId = local?.externalId ?? null;
+        if (externalId) {
+            const accessToken = await this.gmail.getAccessTokenForUser(userId);
+            if (accessToken) {
+                await this.gmail.permanentlyDeleteMessage(accessToken, externalId);
+            }
+            else {
+                const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+                if (msToken) {
+                    await this.microsoftMail.deleteMessage(msToken, externalId);
+                }
+            }
         }
-        return { ok: false };
+        await this.repo.delete({ id: emailId });
+        await this.insightsRepo.delete({ userId, emailId });
+        await this.draftsRepo.delete({ emailId });
+        return { ok: true };
     }
     async deleteEmail(userId, emailId) {
         const accessToken = await this.gmail.getAccessTokenForUser(userId);
         if (accessToken) {
+            try {
+                const email = await this.gmail.getMessage(accessToken, emailId);
+                await this.saveLocalCopy(email, emailId, true, false);
+            }
+            catch (err) {
+                this.log.warn(`Could not cache Gmail email ${emailId} before trashing: ${err}`);
+            }
             await this.gmail.trashMessage(accessToken, emailId);
         }
         else {
             const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
             if (msToken) {
+                try {
+                    const email = await this.microsoftMail.getMessage(msToken, emailId);
+                    await this.saveLocalCopy(email, emailId, true, false);
+                }
+                catch (err) {
+                    this.log.warn(`Could not cache Microsoft email ${emailId} before trashing: ${err}`);
+                }
                 await this.microsoftMail.deleteMessage(msToken, emailId);
             }
             else {
-                await this.repo.delete({ id: emailId });
+                await this.repo.update({ id: emailId }, { isTrashed: true });
             }
         }
         await this.insightsRepo.delete({ userId, emailId });
         await this.draftsRepo.delete({ emailId });
         return { ok: true };
+    }
+    async saveLocalCopy(email, externalId, isTrashed, isSent) {
+        const existing = await this.repo.findOne({ where: { externalId } });
+        if (existing) {
+            await this.repo.update({ id: existing.id }, { isTrashed, isSent });
+            return;
+        }
+        await this.repo.save(this.repo.create({
+            from: email.from,
+            to: email.to ?? '',
+            subject: email.subject,
+            snippet: email.snippet,
+            body: email.body,
+            isRead: email.isRead,
+            isSent,
+            isTrashed,
+            receivedAt: email.receivedAt,
+            externalId,
+        }));
     }
     async attachInsights(userId, emails) {
         if (!emails.length)

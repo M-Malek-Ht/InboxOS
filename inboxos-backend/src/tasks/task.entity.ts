@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
-export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'Backlog' | 'In Progress' | 'Done';
+export type TaskPriority = 'Low' | 'Med' | 'High';
 
 @Entity('tasks')
 export class TaskEntity {
@@ -14,10 +14,10 @@ export class TaskEntity {
   @Column({ type: 'text', default: '' })
   description: string;
 
-  @Column({ default: 'todo' })
+  @Column({ default: 'Backlog' })
   status: TaskStatus;
 
-  @Column({ default: 'medium' })
+  @Column({ default: 'Med' })
   priority: TaskPriority;
 
   @Column({ type: 'timestamptz', nullable: true })

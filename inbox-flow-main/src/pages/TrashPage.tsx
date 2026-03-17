@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { EmailListSkeleton } from '@/components/ui/skeletons';
 import { Input } from '@/components/ui/input';
-import { Search, Trash2, AlertTriangle } from 'lucide-react';
+import { Search, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { PageTransition } from '@/components/PageTransition';
 
@@ -14,7 +14,7 @@ export default function TrashPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
 
-  const { data: emails, isLoading } = useTrashEmails({
+  const { data: emails, isLoading, error } = useTrashEmails({
     search: search || undefined,
     limit: 40,
   });
@@ -61,6 +61,11 @@ export default function TrashPage() {
             <div className="flex-1 overflow-y-auto">
               {isLoading ? (
                 <EmailListSkeleton />
+              ) : error ? (
+                <div className="flex flex-col items-center justify-center h-full text-destructive gap-2">
+                  <AlertCircle className="h-8 w-8 opacity-70" />
+                  <p className="text-sm">Failed to load trash</p>
+                </div>
               ) : emails && emails.length > 0 ? (
                 <AnimatePresence mode="popLayout">
                   <div className="divide-y divide-border">

@@ -14,11 +14,15 @@ const typeorm_1 = require("typeorm");
 let EmailEntity = class EmailEntity {
     id;
     from;
+    to;
     subject;
     snippet;
     body;
     isRead;
+    isSent;
+    isTrashed;
     receivedAt;
+    externalId;
 };
 exports.EmailEntity = EmailEntity;
 __decorate([
@@ -29,6 +33,10 @@ __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
 ], EmailEntity.prototype, "from", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: '' }),
+    __metadata("design:type", String)
+], EmailEntity.prototype, "to", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)
@@ -46,9 +54,21 @@ __decorate([
     __metadata("design:type", Boolean)
 ], EmailEntity.prototype, "isRead", void 0);
 __decorate([
-    (0, typeorm_1.CreateDateColumn)(),
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], EmailEntity.prototype, "isSent", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], EmailEntity.prototype, "isTrashed", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'timestamptz', default: () => 'NOW()' }),
     __metadata("design:type", Date)
 ], EmailEntity.prototype, "receivedAt", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: 'varchar', nullable: true, default: null }),
+    __metadata("design:type", Object)
+], EmailEntity.prototype, "externalId", void 0);
 exports.EmailEntity = EmailEntity = __decorate([
     (0, typeorm_1.Entity)('emails')
 ], EmailEntity);

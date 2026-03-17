@@ -3,43 +3,26 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Account } from '../auth/account.entity';
-
-export interface ParsedEmail {
-  id: string;
-  from: string;
-  subject: string;
-  snippet: string;
-  body: string;
-  receivedAt: Date;
-  isRead: boolean;
-  threadId?: string;
-  to?: string;
-  messageIdHeader?: string;
-  labelIds?: string[];
-  isSent?: boolean;
-}
+import { ParsedEmail } from './email.types';
+import { EmailProviderService } from './email-provider.service';
 
 @Injectable()
-export class GmailService {
-  private readonly log = new Logger(GmailService.name);
+export class GmailService extends EmailProviderService {
+  get providerName(): string {
+    return 'google';
+  }
 
   constructor(
     @InjectRepository(Account)
-    private accountRepo: Repository<Account>,
-    private configService: ConfigService,
-  ) {}
+    accountRepo: Repository<Account>,
+    configService: ConfigService,
+  ) {
+    super(accountRepo, configService);
+  }
 
   // ── token management ────────────────────────────────
 
-  async getAccessTokenForUser(userId: string): Promise<string | null> {
-    const account = await this.accountRepo.findOne({
-      where: { userId, provider: 'google' },
-    });
-    if (!account?.refreshToken) return null;
-    return this.refreshAccessToken(account.refreshToken);
-  }
-
-  private async refreshAccessToken(refreshToken: string): Promise<string> {
+  protected async refreshAccessToken(refreshToken: string): Promise<string> {
     const res = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -300,22 +283,29 @@ export class GmailService {
   ): Promise<ParsedEmail[]> {
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
-    params.set('labelIds', 'SENT');
-    if (options.search) params.set('q', options.search);
+    const qParts = ['in:sent'];
+    if (options.search) qParts.push(options.search);
+    params.set('q', qParts.join(' '));
 
     const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
     const listRes = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    if (!listRes.ok) {
+      const err = await listRes.json().catch(() => ({}));
+      throw new Error((err as any).error?.message ?? `Gmail sent list failed: ${listRes.status}`);
+    }
     const listData = await listRes.json();
     if (!listData.messages) return [];
 
-    const messages = await Promise.all(
+    const results = await Promise.allSettled(
       listData.messages.map((m: { id: string }) =>
         this.fetchAndParse(accessToken, m.id),
       ),
     );
-    return messages;
+    return results
+      .filter((r): r is PromiseFulfilledResult<ParsedEmail> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 
   async listTrashEmails(
@@ -324,22 +314,33 @@ export class GmailService {
   ): Promise<ParsedEmail[]> {
     const params = new URLSearchParams();
     params.set('maxResults', String(options.maxResults ?? 40));
-    params.set('labelIds', 'TRASH');
-    if (options.search) params.set('q', options.search);
+    // CRITICAL: includeSpamTrash=true is required — Gmail messages.list defaults to false,
+    // which silently omits trash messages even when q=in:trash is specified.
+    params.set('includeSpamTrash', 'true');
+    const qParts = ['in:trash'];
+    if (options.search) qParts.push(options.search);
+    params.set('q', qParts.join(' '));
 
     const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
     const listRes = await fetch(url, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
+    if (!listRes.ok) {
+      const err = await listRes.json().catch(() => ({}));
+      throw new Error((err as any).error?.message ?? `Gmail trash list failed: ${listRes.status}`);
+    }
     const listData = await listRes.json();
     if (!listData.messages) return [];
 
-    const messages = await Promise.all(
+    // Use allSettled so a single failed fetch doesn't wipe the entire list
+    const results = await Promise.allSettled(
       listData.messages.map((m: { id: string }) =>
         this.fetchAndParse(accessToken, m.id),
       ),
     );
-    return messages;
+    return results
+      .filter((r): r is PromiseFulfilledResult<ParsedEmail> => r.status === 'fulfilled')
+      .map((r) => r.value);
   }
 
   async untrashMessage(accessToken: string, messageId: string): Promise<void> {
@@ -365,6 +366,18 @@ export class GmailService {
     if (!res.ok) {
       const error = await res.json();
       throw new Error(error.error?.message ?? 'Failed to trash message');
+    }
+  }
+
+  async permanentlyDeleteMessage(accessToken: string, messageId: string): Promise<void> {
+    const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`;
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!res.ok && res.status !== 204) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error((error as any).error?.message ?? 'Failed to permanently delete message');
     }
   }
 

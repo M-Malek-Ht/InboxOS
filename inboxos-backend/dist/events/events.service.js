@@ -17,10 +17,10 @@ const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const event_entity_1 = require("./event.entity");
-let EventsService = class EventsService {
-    repo;
+const base_entity_service_1 = require("../base-entity.service");
+let EventsService = class EventsService extends base_entity_service_1.BaseEntityService {
     constructor(repo) {
-        this.repo = repo;
+        super(repo);
     }
     list(from, to) {
         return this.repo.find({ order: { startAt: 'ASC' } });
@@ -50,12 +50,6 @@ let EventsService = class EventsService {
         if (dto.notes !== undefined)
             event.notes = dto.notes ?? '';
         return this.repo.save(event);
-    }
-    async remove(id) {
-        const res = await this.repo.delete({ id });
-        if (res.affected === 0)
-            throw new common_1.NotFoundException('Event not found');
-        return { ok: true };
     }
 };
 exports.EventsService = EventsService;

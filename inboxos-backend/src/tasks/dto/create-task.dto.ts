@@ -11,11 +11,11 @@ export class CreateTaskDto {
   description?: string;
 
   @IsOptional()
-  @IsIn(['todo', 'in_progress', 'done'])
+  @IsIn(['Backlog', 'In Progress', 'Done'])
   status?: TaskStatus;
 
   @IsOptional()
-  @IsIn(['low', 'medium', 'high'])
+  @IsIn(['Low', 'Med', 'High'])
   priority?: TaskPriority;
 
   @IsOptional()

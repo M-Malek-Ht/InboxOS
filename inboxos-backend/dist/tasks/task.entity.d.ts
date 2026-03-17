@@ -1,5 +1,5 @@
-export type TaskStatus = 'todo' | 'in_progress' | 'done';
-export type TaskPriority = 'low' | 'medium' | 'high';
+export type TaskStatus = 'Backlog' | 'In Progress' | 'Done';
+export type TaskPriority = 'Low' | 'Med' | 'High';
 export declare class TaskEntity {
     id: string;
     title: string;
