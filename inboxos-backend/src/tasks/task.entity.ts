@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index, UpdateDateColumn } from 'typeorm';
 
 export type TaskStatus = 'Backlog' | 'In Progress' | 'Done';
 export type TaskPriority = 'Low' | 'Med' | 'High';
@@ -7,6 +7,10 @@ export type TaskPriority = 'Low' | 'Med' | 'High';
 export class TaskEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Index()
+  @Column({ type: 'uuid' })
+  userId: string;
 
   @Column()
   title: string;
