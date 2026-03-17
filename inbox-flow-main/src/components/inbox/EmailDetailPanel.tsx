@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useGenerateDraft, useThread, useDeleteEmail, useUntrashEmail } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useThread, useDeleteEmail, useUntrashEmail } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { CategoryBadge, PriorityIndicator, JobStatus } from '@/components/ui/badges';
 import { EmailDetailSkeleton } from '@/components/ui/skeletons';
@@ -23,6 +23,8 @@ import {
   ArchiveRestore,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+type EmailListData = { data: Email[]; total: number };
 
 interface EmailDetailPanelProps {
   email: Email | null;
@@ -60,14 +62,14 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
     if (classifyJob?.status === 'done') {
       if (email?.id && classifyJob.result) {
         const result = classifyJob.result as Record<string, unknown>;
-        queryClient.setQueryData(['email', email.id], (old: any) =>
+        queryClient.setQueryData<Email>(['email', email.id], (old) =>
           old ? { ...old, ...result } : old,
         );
-        queryClient.setQueriesData({ queryKey: ['emails'] }, (old: any) => {
+        queryClient.setQueriesData<EmailListData>({ queryKey: ['emails'] }, (old) => {
           if (!old?.data) return old;
           return {
             ...old,
-            data: old.data.map((item: any) =>
+            data: old.data.map((item) =>
               item.id === email.id ? { ...item, ...result } : item,
             ),
           };
@@ -98,25 +100,41 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
 
   const handleClassify = async () => {
     if (!email) return;
-    const result = await classifyEmail.mutateAsync(email.id);
-    setClassifyJobId(result.jobId);
+    try {
+      const result = await classifyEmail.mutateAsync(email.id);
+      setClassifyJobId(result.jobId);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to start classification';
+      toast.error(message);
+    }
   };
 
   const handleCreateTask = async () => {
     if (!email) return;
-    await createTask.mutateAsync({
-      emailId: email.id,
-      title: `Follow up: ${email.subject}`,
-      description: email.snippet,
-      priority: email.priorityScore && email.priorityScore >= 80 ? 'High' : 'Med',
-    });
-    toast.success('Task created');
+    try {
+      await createTask.mutateAsync({
+        emailId: email.id,
+        title: `Follow up: ${email.subject}`,
+        description: email.snippet,
+        priority: email.priorityScore && email.priorityScore >= 80 ? 'High' : 'Med',
+      });
+      toast.success('Task created');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create task';
+      toast.error(message);
+    }
   };
 
   const handleExtractDates = async () => {
     if (!email) return;
-    const result = await extractDates.mutateAsync(email.id);
-    setExtractJobId(result.jobId);
+    try {
+      const result = await extractDates.mutateAsync(email.id);
+      setExtractJobId(result.jobId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to extract dates';
+      toast.error(message);
+    }
   };
 
   const handleDelete = async () => {
@@ -317,7 +335,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
       <div className="flex-1 overflow-y-auto min-h-0">
         {threadMessages && threadMessages.length > 1 ? (
           <div className="divide-y divide-border">
-            {threadMessages.map((msg: any) => {
+            {threadMessages.map((msg) => {
               // If the message's from matches the original email's from, it's from the sender
               // Otherwise it's from the current user (a sent reply)
               const isFromSender = !msg.isSent;

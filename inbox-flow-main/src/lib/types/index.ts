@@ -16,10 +16,13 @@ export type JobStatus = 'queued' | 'processing' | 'done' | 'failed';
 
 export interface Email {
   id: string;
+  from?: string;
   fromName: string;
   fromEmail: string;
+  to?: string;
   subject: string;
   snippet: string;
+  body?: string;
   bodyText: string;
   receivedAt: string;
   isRead: boolean;
@@ -28,6 +31,7 @@ export interface Email {
   priorityScore?: number;
   needsReply?: boolean;
   summary?: string;
+  isSent?: boolean;
 }
 
 export interface Draft {

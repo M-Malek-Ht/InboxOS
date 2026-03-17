@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { RefreshCw, Moon, Sun, Monitor, Sparkles } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import { useModKey } from '@/lib/hooks/useOS';
+import { Theme } from '@/components/ThemeProvider';
 import { Tone, Length } from '@/lib/types';
 
 const tones: Tone[] = ['Professional', 'Friendly', 'Short', 'Firm', 'Apologetic'];
@@ -21,8 +22,14 @@ export default function SettingsPage() {
   const updateSettings = useUpdateSettings();
 
   const handleReset = async () => {
-    await resetData.mutateAsync();
-    toast.success('Demo data reset successfully');
+    try {
+      await resetData.mutateAsync();
+      toast.success('Demo data reset successfully');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to reset demo data';
+      toast.error(message);
+    }
   };
 
   const handleToneChange = (tone: string) => {
@@ -51,7 +58,7 @@ export default function SettingsPage() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <Label>Theme</Label>
-            <Select value={theme} onValueChange={(v) => setTheme(v as any)}>
+            <Select value={theme} onValueChange={(v) => setTheme(v as Theme)}>
               <SelectTrigger className="w-40">
                 <SelectValue />
               </SelectTrigger>

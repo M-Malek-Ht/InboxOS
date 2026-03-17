@@ -9,6 +9,7 @@ import { StatCardSkeleton } from '@/components/ui/skeletons';
 import { PageTransition } from '@/components/PageTransition';
 import { Inbox, CheckSquare, Calendar, AlertCircle, ArrowRight, Mail, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { LucideIcon } from 'lucide-react';
 
 const stagger = {
   hidden: { opacity: 0 },
@@ -165,7 +166,7 @@ export default function Dashboard() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, href, color }: { icon: any; label: string; value: number; href: string; color?: string }) {
+function StatCard({ icon: Icon, label, value, href, color }: { icon: LucideIcon; label: string; value: number; href: string; color?: string }) {
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
       <Link to={href}>

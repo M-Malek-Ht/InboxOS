@@ -1,6 +1,6 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { CalendarEvent } from '@/lib/types';
-import { useEvents, useCreateEvent, useUpdateEvent, useDeleteEvent } from '@/lib/api/hooks';
+import { useEvents, useCreateEvent, useDeleteEvent } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import {
   format,
@@ -16,7 +16,6 @@ import {
   subMonths,
   addWeeks,
   subWeeks,
-  startOfDay,
   addDays,
 } from 'date-fns';
 import { Button } from '@/components/ui/button';
@@ -30,7 +29,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { CalendarSkeleton } from '@/components/ui/skeletons';
-import { EmptyCalendar } from '@/components/ui/empty-states';
 import { toast } from 'sonner';
 import {
   ChevronLeft,
@@ -39,9 +37,7 @@ import {
   MapPin,
   Clock,
   Trash2,
-  X,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface CalendarViewProps {
   view: 'month' | 'week';
@@ -315,9 +311,15 @@ function EventModal({ event, onClose }: EventModalProps) {
 
   const handleDelete = async () => {
     if (!event) return;
-    await deleteEvent.mutateAsync(event.id);
-    toast.success('Event deleted');
-    onClose();
+    try {
+      await deleteEvent.mutateAsync(event.id);
+      toast.success('Event deleted');
+      onClose();
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to delete event';
+      toast.error(message);
+    }
   };
 
   if (!event) return null;
@@ -386,6 +388,16 @@ function CreateEventModal({ open, onOpenChange, defaultDate }: CreateEventModalP
   const [startTime, setStartTime] = useState('10:00');
   const [endTime, setEndTime] = useState('11:00');
 
+  useEffect(() => {
+    if (!open) return;
+
+    setTitle('');
+    setLocation('');
+    setNotes('');
+    setStartTime('10:00');
+    setEndTime('11:00');
+  }, [open, defaultDate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !defaultDate) return;
@@ -399,19 +411,27 @@ function CreateEventModal({ open, onOpenChange, defaultDate }: CreateEventModalP
     const endAt = new Date(defaultDate);
     endAt.setHours(endHour, endMin, 0, 0);
 
-    await createEvent.mutateAsync({
-      title: title.trim(),
-      startAt: startAt.toISOString(),
-      endAt: endAt.toISOString(),
-      location: location.trim() || undefined,
-      notes: notes.trim() || undefined,
-    });
-    
-    toast.success('Event created');
-    setTitle('');
-    setLocation('');
-    setNotes('');
-    onOpenChange(false);
+    if (endAt <= startAt) {
+      toast.error('End time must be after the start time.');
+      return;
+    }
+
+    try {
+      await createEvent.mutateAsync({
+        title: title.trim(),
+        startAt: startAt.toISOString(),
+        endAt: endAt.toISOString(),
+        location: location.trim() || undefined,
+        notes: notes.trim() || undefined,
+      });
+
+      toast.success('Event created');
+      onOpenChange(false);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to create event';
+      toast.error(message);
+    }
   };
 
   return (

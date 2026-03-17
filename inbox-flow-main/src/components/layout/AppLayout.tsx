@@ -12,19 +12,29 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { open: commandOpen, setOpen: setCommandOpen } = useCommandPalette();
   const [globalSearch, setGlobalSearch] = useState('');
 
+  const handleGlobalSearch = (value: string) => {
+    setGlobalSearch(value);
+    setCommandOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex w-full bg-background">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <TopBar 
           onCommandPalette={() => setCommandOpen(true)}
-          onSearch={setGlobalSearch}
+          onSearch={handleGlobalSearch}
         />
         <main className="flex-1 overflow-auto">
           {children || <Outlet />}
         </main>
       </div>
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        search={globalSearch}
+        onSearchChange={setGlobalSearch}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Task, TaskStatus, TaskPriority } from '@/lib/types';
 import { useTasks, useUpdateTask, useCreateTask, useDeleteTask } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
@@ -33,6 +33,7 @@ import {
   DndContext,
   DragOverlay,
   closestCenter,
+  useDroppable,
   useSensor,
   useSensors,
   PointerSensor,
@@ -45,6 +46,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { SyntheticListenerMap } from '@dnd-kit/core/dist/hooks/utilities';
 
 const statuses: TaskStatus[] = ['Backlog', 'In Progress', 'Done'];
 const priorities: TaskPriority[] = ['Low', 'Med', 'High'];
@@ -84,9 +86,13 @@ export function KanbanBoard({ view }: KanbanBoardProps) {
     if (!over) return;
 
     const taskId = active.id as string;
-    const newStatus = over.id as TaskStatus;
+    const overId = over.id as string;
+    const targetTask = tasks?.find((task) => task.id === overId);
+    const newStatus = statuses.includes(overId as TaskStatus)
+      ? (overId as TaskStatus)
+      : targetTask?.status;
 
-    if (statuses.includes(newStatus)) {
+    if (newStatus && statuses.includes(newStatus)) {
       updateTask.mutate({ id: taskId, request: { status: newStatus } });
     }
   };
@@ -96,8 +102,13 @@ export function KanbanBoard({ view }: KanbanBoardProps) {
   };
 
   const handleDelete = async (taskId: string) => {
-    await deleteTask.mutateAsync(taskId);
-    toast.success('Task deleted');
+    try {
+      await deleteTask.mutateAsync(taskId);
+      toast.success('Task deleted');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to delete task';
+      toast.error(message);
+    }
   };
 
   const activeTask = tasks?.find(t => t.id === activeId);
@@ -188,7 +199,7 @@ interface KanbanColumnProps {
 }
 
 function KanbanColumn({ status, tasks, onStatusChange, onDelete }: KanbanColumnProps) {
-  const { setNodeRef } = useSortable({ id: status });
+  const { setNodeRef, isOver } = useDroppable({ id: status });
 
   const statusIcon = {
     'Backlog': <Circle className="h-4 w-4 text-muted-foreground" />,
@@ -199,7 +210,10 @@ function KanbanColumn({ status, tasks, onStatusChange, onDelete }: KanbanColumnP
   return (
     <div
       ref={setNodeRef}
-      className="w-72 flex-shrink-0 flex flex-col bg-muted/50 border border-border/60 rounded-xl p-3"
+      className={cn(
+        'w-72 flex-shrink-0 flex flex-col bg-muted/50 border border-border/60 rounded-xl p-3 transition-colors',
+        isOver && 'border-primary/60 bg-primary/5',
+      )}
     >
       <div className="flex items-center gap-2 mb-3 px-1">
         {statusIcon[status]}
@@ -260,6 +274,7 @@ function SortableTaskCard({ task, onStatusChange, onDelete }: SortableTaskCardPr
         task={task}
         isDragging={isDragging}
         dragListeners={listeners}
+        onStatusChange={onStatusChange}
         onDelete={onDelete}
       />
     </div>
@@ -269,11 +284,12 @@ function SortableTaskCard({ task, onStatusChange, onDelete }: SortableTaskCardPr
 interface TaskCardProps {
   task: Task;
   isDragging?: boolean;
-  dragListeners?: any;
+  dragListeners?: SyntheticListenerMap;
+  onStatusChange?: (taskId: string, status: TaskStatus) => void;
   onDelete?: (taskId: string) => void;
 }
 
-function TaskCard({ task, isDragging, dragListeners, onDelete }: TaskCardProps) {
+function TaskCard({ task, isDragging, dragListeners, onStatusChange, onDelete }: TaskCardProps) {
   return (
     <div
       className={cn(
@@ -297,6 +313,23 @@ function TaskCard({ task, isDragging, dragListeners, onDelete }: TaskCardProps) 
           )}
           <div className="flex items-center gap-2">
             <PriorityIndicator priority={task.priority} showLabel />
+            {onStatusChange && (
+              <Select
+                value={task.status}
+                onValueChange={(value) => onStatusChange(task.id, value as TaskStatus)}
+              >
+                <SelectTrigger className="h-7 w-[132px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {statuses.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {task.dueDate && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -395,17 +428,22 @@ function CreateTaskDialog({ open, onOpenChange }: CreateTaskDialogProps) {
     e.preventDefault();
     if (!title.trim()) return;
 
-    await createTask.mutateAsync({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      priority,
-    });
-    
-    toast.success('Task created');
-    setTitle('');
-    setDescription('');
-    setPriority('Med');
-    onOpenChange(false);
+    try {
+      await createTask.mutateAsync({
+        title: title.trim(),
+        description: description.trim() || undefined,
+        priority,
+      });
+
+      toast.success('Task created');
+      setTitle('');
+      setDescription('');
+      setPriority('Med');
+      onOpenChange(false);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create task';
+      toast.error(message);
+    }
   };
 
   return (

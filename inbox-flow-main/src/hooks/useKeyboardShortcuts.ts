@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 
 type ShortcutHandler = () => void;
 
@@ -10,8 +10,6 @@ interface ShortcutConfig {
   handler: ShortcutHandler;
   description?: string;
 }
-
-const registeredShortcuts: ShortcutConfig[] = [];
 
 export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
   useEffect(() => {
@@ -30,8 +28,8 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
 
       for (const shortcut of shortcuts) {
         const keyMatch = e.key.toLowerCase() === shortcut.key.toLowerCase();
-        const ctrlMatch = !!shortcut.ctrl === (e.ctrlKey || e.metaKey);
-        const metaMatch = !!shortcut.meta === e.metaKey;
+        const ctrlPressed = e.ctrlKey || e.metaKey;
+        const ctrlMatch = shortcut.ctrl === undefined ? true : shortcut.ctrl === ctrlPressed;
         const shiftMatch = !!shortcut.shift === e.shiftKey;
 
         if (keyMatch && ctrlMatch && shiftMatch) {

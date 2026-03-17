@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Email } from '@/lib/types';
 import { InboxList } from '@/components/inbox/InboxList';
 import { EmailDetailPanel } from '@/components/inbox/EmailDetailPanel';
@@ -6,15 +6,27 @@ import { DraftEditor } from '@/components/drafts/DraftEditor';
 import { useEmail, useEmails, useAutoClassify } from '@/lib/api/hooks';
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from '@/components/PageTransition';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDraftEditor, setShowDraftEditor] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const { data: emailsData } = useEmails({ limit: 40 });
   useAutoClassify(emailsData?.data);
 
   const { data: selectedEmail, isLoading } = useEmail(selectedId);
+
+  const routeSelectedId = (location.state as { selectedEmailId?: string } | null)?.selectedEmailId;
+
+  useEffect(() => {
+    if (!routeSelectedId || routeSelectedId === selectedId) return;
+
+    setSelectedId(routeSelectedId);
+    navigate(location.pathname, { replace: true, state: {} });
+  }, [routeSelectedId, selectedId, navigate, location.pathname]);
 
   const handleSelect = useCallback((email: Email) => {
     setSelectedId(email.id);

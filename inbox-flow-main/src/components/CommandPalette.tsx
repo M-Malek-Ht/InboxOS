@@ -25,12 +25,22 @@ interface CommandPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEmailSelect?: (emailId: string) => void;
+  search?: string;
+  onSearchChange?: (value: string) => void;
 }
 
-export function CommandPalette({ open, onOpenChange, onEmailSelect }: CommandPaletteProps) {
+export function CommandPalette({
+  open,
+  onOpenChange,
+  onEmailSelect,
+  search: controlledSearch,
+  onSearchChange,
+}: CommandPaletteProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const [search, setSearch] = useState('');
+  const [internalSearch, setInternalSearch] = useState('');
+  const search = controlledSearch ?? internalSearch;
+  const setSearch = onSearchChange ?? setInternalSearch;
   
   const { data: emailsData } = useEmails({ search: search.length > 1 ? search : undefined, limit: 5 });
 
@@ -38,16 +48,17 @@ export function CommandPalette({ open, onOpenChange, onEmailSelect }: CommandPal
     navigate(path);
     onOpenChange(false);
     setSearch('');
-  }, [navigate, onOpenChange]);
+  }, [navigate, onOpenChange, setSearch]);
 
   const handleEmailSelect = useCallback((emailId: string) => {
     if (onEmailSelect) {
       onEmailSelect(emailId);
+    } else {
+      navigate('/inbox', { state: { selectedEmailId: emailId } });
     }
-    navigate('/inbox');
     onOpenChange(false);
     setSearch('');
-  }, [navigate, onOpenChange, onEmailSelect]);
+  }, [navigate, onOpenChange, onEmailSelect, setSearch]);
 
   const pages = [
     { name: 'Dashboard', path: '/', icon: Search },

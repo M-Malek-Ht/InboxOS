@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAllDrafts, useEmails, useEmail, useSendReply, useGenerateDraft, useJob, useDrafts } from '@/lib/api/hooks';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Tone, Length } from '@/lib/types';
+import { Draft, Email, Tone, Length } from '@/lib/types';
 
 const tones: Tone[] = ['Professional', 'Friendly', 'Short', 'Firm', 'Apologetic'];
 const lengths: Length[] = ['Short', 'Medium', 'Detailed'];
@@ -38,29 +38,32 @@ export default function DraftsPage() {
   const { data: job } = useJob(jobId);
   const { refetch: refetchEmailDrafts } = useDrafts(selectedEmailId);
 
-  // Handle job completion
-  if (job?.status === 'done' && jobId) {
-    setJobId(null);
-    refetchDrafts();
-    refetchEmailDrafts();
-    toast.success('Draft regenerated!');
-  } else if (job?.status === 'failed' && jobId) {
-    setJobId(null);
-    toast.error('Draft generation failed');
-  }
+  useEffect(() => {
+    if (!jobId || !job) return;
+
+    if (job.status === 'done') {
+      setJobId(null);
+      void refetchDrafts();
+      void refetchEmailDrafts();
+      toast.success('Draft regenerated!');
+    } else if (job.status === 'failed') {
+      setJobId(null);
+      toast.error('Draft generation failed');
+    }
+  }, [job, jobId, refetchDrafts, refetchEmailDrafts]);
 
   // Match drafts to emails
   const emailsWithDrafts = useMemo(() => {
     if (!allDrafts || !emailsData?.data) return [];
-    const draftByEmailId = new Map(allDrafts.map((d: any) => [d.emailId, d]));
+    const draftByEmailId = new Map<string, Draft>(allDrafts.map((draft) => [draft.emailId, draft]));
     return emailsData.data
       .filter((e) => draftByEmailId.has(e.id))
       .map((e) => ({ ...e, draft: draftByEmailId.get(e.id) }));
   }, [allDrafts, emailsData]);
 
-  const selectedDraft = useMemo(() => {
+  const selectedDraft = useMemo<Draft | null>(() => {
     if (!allDrafts || !selectedEmailId) return null;
-    return allDrafts.find((d: any) => d.emailId === selectedEmailId) ?? null;
+    return allDrafts.find((draft) => draft.emailId === selectedEmailId) ?? null;
   }, [allDrafts, selectedEmailId]);
 
   const handleSend = async () => {
@@ -114,7 +117,7 @@ export default function DraftsPage() {
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {emailsWithDrafts.map((item) => (
+              {emailsWithDrafts.map((item: Email & { draft?: Draft }) => (
                 <button
                   key={item.id}
                   onClick={() => {

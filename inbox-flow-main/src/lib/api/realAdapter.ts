@@ -1,4 +1,127 @@
 import { http } from './http';
+import type {
+  CreateDraftRequest,
+  CreateEventRequest,
+  CreateTaskRequest,
+  Draft,
+  Email,
+  EventsQueryParams,
+  Length,
+  Task,
+  TasksQueryParams,
+  Tone,
+  UpdateTaskRequest,
+} from '@/lib/types';
+
+interface EmailApiResponse {
+  id: string;
+  from?: string;
+  to?: string;
+  subject?: string;
+  snippet?: string;
+  body?: string;
+  receivedAt: string;
+  isRead?: boolean;
+  needsReply?: boolean;
+  priorityScore?: number;
+  category?: Email['category'];
+  tags?: string[];
+  summary?: string;
+  isSent?: boolean;
+}
+
+interface TaskApiResponse {
+  id: string;
+  emailId?: string;
+  title: string;
+  description?: string;
+  status?: string;
+  priority?: string;
+  dueDate?: string | null;
+  createdAt: string;
+}
+
+interface EventApiResponse {
+  id: string;
+  emailId?: string;
+  title: string;
+  startAt: string;
+  endAt: string;
+  location?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+interface JobApiResponse {
+  id: string;
+  type: string;
+  status: string;
+  result: unknown;
+  error: string | null;
+}
+
+interface SettingsApiResponse {
+  defaultTone: string;
+  defaultLength: string;
+}
+
+type FrontendTaskStatus = 'Backlog' | 'In Progress' | 'Done';
+type FrontendTaskPriority = 'Low' | 'Med' | 'High';
+
+function normalizeTaskStatus(status?: string): FrontendTaskStatus {
+  switch ((status ?? '').toLowerCase()) {
+    case 'done':
+      return 'Done';
+    case 'in progress':
+    case 'in_progress':
+    case 'in-progress':
+    case 'progress':
+      return 'In Progress';
+    case 'backlog':
+    case 'todo':
+    default:
+      return 'Backlog';
+  }
+}
+
+function normalizeTaskPriority(priority?: string): FrontendTaskPriority {
+  switch ((priority ?? '').toLowerCase()) {
+    case 'high':
+      return 'High';
+    case 'low':
+      return 'Low';
+    case 'med':
+    case 'medium':
+    default:
+      return 'Med';
+  }
+}
+
+function serializeTaskStatus(status?: string) {
+  switch (status) {
+    case 'Done':
+      return 'done';
+    case 'In Progress':
+      return 'in progress';
+    case 'Backlog':
+      return 'todo';
+    default:
+      return status;
+  }
+}
+
+function serializeTaskPriority(priority?: string) {
+  switch (priority) {
+    case 'High':
+      return 'high';
+    case 'Low':
+      return 'low';
+    case 'Med':
+      return 'medium';
+    default:
+      return priority;
+  }
+}
 
 /** Strip HTML tags and decode common entities to get readable plain text. */
 function stripHtml(html: string): string {
@@ -18,7 +141,7 @@ function stripHtml(html: string): string {
     .trim();
 }
 
-function mapEmail(e: any) {
+function mapEmail(e: EmailApiResponse): Email {
   // Sent items are shown from the recipient perspective ("To: ...").
   const senderOrRecipientRaw = (e.isSent && e.to ? e.to : e.from) ?? 'Unknown';
   const fromRaw = senderOrRecipientRaw;
@@ -59,50 +182,108 @@ function mapEmail(e: any) {
   };
 }
 
+function mapTask(task: TaskApiResponse): Task {
+  return {
+    ...task,
+    status: normalizeTaskStatus(task?.status),
+    priority: normalizeTaskPriority(task?.priority),
+    dueDate: task?.dueDate ?? undefined,
+  };
+}
+
+function mapEvent(event: EventApiResponse) {
+  return {
+    ...event,
+    startAt: event?.startAt,
+    endAt: event?.endAt,
+  };
+}
+
 export const api = {
-  getEmails: async (params: any) => {
+  getEmails: async (params: { filter?: string; search?: string; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.filter) qs.set('filter', params.filter);
     if (params?.search) qs.set('search', params.search);
     qs.set('limit', String(params?.limit ?? 40));
 
     const path = `/emails?${qs.toString()}`;
-    const list = await http.get<any[]>(path);
+    const list = await http.get<EmailApiResponse[]>(path);
     const mapped = list.map(mapEmail);
     return { data: mapped, total: mapped.length };
   },
 
   getEmail: async (id: string) => {
-    const e = await http.get<any>(`/emails/${id}`);
+    const e = await http.get<EmailApiResponse>(`/emails/${id}`);
     return mapEmail(e);
   },
 
   // Thread
   getThread: async (emailId: string) => {
-    const list = await http.get<any[]>(`/emails/${emailId}/thread`);
+    const list = await http.get<EmailApiResponse[]>(`/emails/${emailId}/thread`);
     return list.map(mapEmail);
   },
 
   // Drafts (match hooks names)
-  getDrafts: (emailId: string) => http.get<any[]>(`/emails/${emailId}/drafts`),
-  generateDraft: (emailId: string, request: any) =>
-    http.post<any>(`/emails/${emailId}/drafts`, request),
+  getDrafts: (emailId: string) => http.get<Draft[]>(`/emails/${emailId}/drafts`),
+  generateDraft: (emailId: string, request: CreateDraftRequest) =>
+    http.post<{ jobId: string }>(`/emails/${emailId}/drafts`, request),
 
   // Tasks (match hooks names)
-  getTasks: (_params: any) => http.get<any[]>('/tasks'),
-  createTask: (request: any) => http.post<any>('/tasks', request),
-  updateTask: (id: string, request: any) => http.patch<any>(`/tasks/${id}`, request),
-  deleteTask: (id: string) => http.delete<any>(`/tasks/${id}`),
+  getTasks: async (params: TasksQueryParams) => {
+    const tasks = await http.get<TaskApiResponse[]>('/tasks');
+    const mapped = tasks.map(mapTask);
+
+    if (params?.status) {
+      return mapped.filter((task) => task.status === params.status);
+    }
+
+    return mapped;
+  },
+  createTask: async (request: CreateTaskRequest) => {
+    const created = await http.post<TaskApiResponse>('/tasks', {
+      ...request,
+      status: serializeTaskStatus(request?.status),
+      priority: serializeTaskPriority(request?.priority),
+    });
+    return mapTask(created);
+  },
+  updateTask: async (id: string, request: UpdateTaskRequest) => {
+    const updated = await http.patch<TaskApiResponse>(`/tasks/${id}`, {
+      ...request,
+      status: serializeTaskStatus(request?.status),
+      priority: serializeTaskPriority(request?.priority),
+    });
+    return mapTask(updated);
+  },
+  deleteTask: (id: string) => http.delete<{ ok: boolean }>(`/tasks/${id}`),
 
   // Events (match hooks names)
-  getEvents: (_params: any) => http.get<any[]>('/events'),
-  createEvent: (request: any) => http.post<any>('/events', request),
-  updateEvent: (id: string, request: any) => http.patch<any>(`/events/${id}`, request),
-  deleteEvent: (id: string) => http.delete<any>(`/events/${id}`),
+  getEvents: async (params: EventsQueryParams) => {
+    const qs = new URLSearchParams();
+    if (params?.from) qs.set('from', params.from);
+    if (params?.to) qs.set('to', params.to);
+
+    const events = await http.get<EventApiResponse[]>(`/events${qs.toString() ? `?${qs.toString()}` : ''}`);
+    return events
+      .map(mapEvent)
+      .filter((event) => {
+        if (!params?.from && !params?.to) return true;
+
+        const start = new Date(event.startAt).getTime();
+        const from = params?.from ? new Date(params.from).getTime() : Number.NEGATIVE_INFINITY;
+        const to = params?.to ? new Date(params.to).getTime() : Number.POSITIVE_INFINITY;
+
+        return start >= from && start <= to;
+      });
+  },
+  createEvent: async (request: CreateEventRequest) => mapEvent(await http.post<EventApiResponse>('/events', request)),
+  updateEvent: async (id: string, request: Partial<CreateEventRequest>) =>
+    mapEvent(await http.patch<EventApiResponse>(`/events/${id}`, request)),
+  deleteEvent: (id: string) => http.delete<{ ok: boolean }>(`/events/${id}`),
 
   // Email actions
   markEmailRead: async (id: string, isRead: boolean) =>
-    http.patch<any>(`/emails/${id}`, { isRead }),
+    http.patch<EmailApiResponse | { ok: boolean }>(`/emails/${id}`, { isRead }),
 
   // Reply
   sendReply: async (emailId: string, body: string, draftId?: string) =>
@@ -121,32 +302,32 @@ export const api = {
 
   // Job polling
   getJob: async (jobId: string) =>
-    http.get<{ id: string; type: string; status: string; result: any; error: string | null }>(`/jobs/${jobId}`),
+    http.get<JobApiResponse>(`/jobs/${jobId}`),
 
   // Settings
   getSettings: async () =>
-    http.get<{ defaultTone: string; defaultLength: string }>('/settings'),
-  updateSettings: async (updates: { defaultTone?: string; defaultLength?: string }) =>
-    http.patch<{ defaultTone: string; defaultLength: string }>('/settings', updates),
+    http.get<SettingsApiResponse>('/settings'),
+  updateSettings: async (updates: { defaultTone?: Tone; defaultLength?: Length }) =>
+    http.patch<SettingsApiResponse>('/settings', updates),
 
   // All drafts (latest per email)
-  getAllDrafts: async () => http.get<any[]>('/drafts'),
+  getAllDrafts: async () => http.get<Draft[]>('/drafts'),
 
   // Sent emails
-  getSentEmails: async (params: any) => {
+  getSentEmails: async (params: { search?: string; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set('search', params.search);
     qs.set('limit', String(params?.limit ?? 40));
-    const list = await http.get<any[]>(`/emails/sent?${qs.toString()}`);
+    const list = await http.get<EmailApiResponse[]>(`/emails/sent?${qs.toString()}`);
     return list.map(mapEmail);
   },
 
   // Trash emails
-  getTrashEmails: async (params: any) => {
+  getTrashEmails: async (params: { search?: string; limit?: number }) => {
     const qs = new URLSearchParams();
     if (params?.search) qs.set('search', params.search);
     qs.set('limit', String(params?.limit ?? 40));
-    const list = await http.get<any[]>(`/emails/trash?${qs.toString()}`);
+    const list = await http.get<EmailApiResponse[]>(`/emails/trash?${qs.toString()}`);
     return list.map(mapEmail);
   },
 
@@ -155,6 +336,10 @@ export const api = {
     http.post<{ ok: boolean }>(`/emails/${emailId}/untrash`, {}),
 
   // Not yet implemented
-  extractDates: async (_emailId: string) => ({ jobId: 'not-implemented' }),
-  resetDemoData: async () => ({ ok: true }),
+  extractDates: async (_emailId: string) => {
+    throw new Error('Date extraction is not available in the current backend yet.');
+  },
+  resetDemoData: async () => {
+    throw new Error('Demo data reset is only available in the mock adapter.');
+  },
 };

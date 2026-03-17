@@ -1,11 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useEffect } from 'react';
 import {
-  Email, Draft, Task, CalendarEvent, Job,
+  Email, Task,
   EmailsQueryParams, CreateDraftRequest, CreateTaskRequest,
   UpdateTaskRequest, CreateEventRequest, EventsQueryParams, TasksQueryParams
 } from '@/lib/types';
 import { api } from './realAdapter';
+
+type EmailListData = { data: Email[]; total: number };
 
 
 // Query keys
@@ -51,16 +53,16 @@ export function useMarkEmailRead() {
     onMutate: async ({ id, isRead }) => {
       await queryClient.cancelQueries({ queryKey: ['emails'] });
 
-      const previousEmail = queryClient.getQueryData(['email', id]);
-      queryClient.setQueryData(['email', id], (old: any) =>
+      const previousEmail = queryClient.getQueryData<Email>(['email', id]);
+      queryClient.setQueryData<Email>(['email', id], (old) =>
         old ? { ...old, isRead } : old,
       );
 
-      queryClient.setQueriesData({ queryKey: ['emails'] }, (old: any) => {
+      queryClient.setQueriesData<EmailListData>({ queryKey: ['emails'] }, (old) => {
         if (!old?.data) return old;
         return {
           ...old,
-          data: old.data.map((e: any) => (e.id === id ? { ...e, isRead } : e)),
+          data: old.data.map((email) => (email.id === id ? { ...email, isRead } : email)),
         };
       });
 
@@ -153,26 +155,25 @@ export function useUpdateTask() {
     mutationFn: ({ id, request }: { id: string; request: UpdateTaskRequest }) =>
       api.updateTask(id, request),
     onMutate: async ({ id, request }) => {
-      // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      
-      // Snapshot the previous value
-      const previousTasks = queryClient.getQueryData<Task[]>(['tasks', {}]);
-      
-      // Optimistically update
-      if (previousTasks) {
-        queryClient.setQueryData<Task[]>(['tasks', {}], 
-          previousTasks.map(t => t.id === id ? { ...t, ...request } : t)
+
+      const previousTasks = queryClient.getQueriesData<Task[]>({ queryKey: ['tasks'] });
+
+      previousTasks.forEach(([queryKey, tasks]) => {
+        if (!tasks) return;
+
+        queryClient.setQueryData<Task[]>(
+          queryKey,
+          tasks.map((task) => (task.id === id ? { ...task, ...request } : task)),
         );
-      }
-      
+      });
+
       return { previousTasks };
     },
-    onError: (err, variables, context) => {
-      // Rollback on error
-      if (context?.previousTasks) {
-        queryClient.setQueryData(['tasks', {}], context.previousTasks);
-      }
+    onError: (_err, _variables, context) => {
+      context?.previousTasks?.forEach(([queryKey, tasks]) => {
+        queryClient.setQueryData(queryKey, tasks);
+      });
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -302,11 +303,13 @@ export function useAutoClassify(emails: Email[] | undefined) {
     // Only fire once per mount
     firedRef.current = true;
 
+    let poll: ReturnType<typeof setInterval> | undefined;
+
     api.classifyBatch(unclassified).then(({ jobId }) => {
       if (!jobId) return;
 
       // Poll the single batch job; refresh periodically as emails get classified
-      const poll = setInterval(async () => {
+      poll = setInterval(async () => {
         try {
           const job = await api.getJob(jobId);
           // Refresh on every poll so the UI updates progressively
@@ -322,6 +325,10 @@ export function useAutoClassify(emails: Email[] | undefined) {
     }).catch(() => {
       // Silently fail — classification is best-effort
     });
+
+    return () => {
+      if (poll) clearInterval(poll);
+    };
   }, [emails, queryClient]);
 }
 

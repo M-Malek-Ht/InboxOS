@@ -28,9 +28,8 @@ const pageTitles: Record<string, string> = {
 
 export function TopBar({ onCommandPalette, onSearch }: TopBarProps) {
   const location = useLocation();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
   const modKey = useModKey();
-  const [searchFocused, setSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -79,8 +78,6 @@ export function TopBar({ onCommandPalette, onSearch }: TopBarProps) {
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
             className={cn(
               'pl-9 pr-12 h-9 bg-muted/50 border-transparent',
               'focus:bg-background focus:border-input',

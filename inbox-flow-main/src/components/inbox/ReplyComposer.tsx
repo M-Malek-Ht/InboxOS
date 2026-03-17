@@ -46,7 +46,8 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
 
   // Auto-focus textarea on mount
   useEffect(() => {
-    setTimeout(() => textareaRef.current?.focus(), 100);
+    const timeoutId = window.setTimeout(() => textareaRef.current?.focus(), 100);
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
   // Auto-resize textarea
@@ -70,7 +71,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
         }
       });
       setJobId(null);
-      toast.success('AI draft ready — edit and send!');
+      toast.success('AI draft ready. Edit and send when you are ready.');
     } else if (job?.status === 'failed') {
       toast.error('Draft generation failed');
       setJobId(null);
@@ -101,7 +102,7 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       await sendReply.mutateAsync({ emailId: email.id, body: content.trim() });
       setSent(true);
       toast.success('Reply sent!');
-      setTimeout(() => onSent(), 1200);
+      window.setTimeout(() => onSent(), 1200);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to send reply';
       toast.error(message);
