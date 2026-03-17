@@ -4,16 +4,16 @@ export declare class EmailsController {
     private readonly emails;
     private readonly runner;
     constructor(emails: EmailsService, runner: JobRunnerService);
-    list(req: any, filter?: string, search?: string, limit?: string): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
-    listSent(req: any, search?: string, limit?: string): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
-    listTrash(req: any, search?: string, limit?: string): Promise<import("./email.entity").EmailEntity[]>;
-    getThread(id: string, req: any): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
-    get(id: string, req: any): Promise<import("./email.entity").EmailEntity | import("./email.types").ParsedEmail>;
+    list(req: any, filter?: string, search?: string, limit?: string): Promise<{
+        id: string;
+    }[]>;
+    listSent(req: any, search?: string, limit?: string): Promise<any>;
+    listTrash(req: any, search?: string, limit?: string): Promise<any>;
+    getThread(id: string, req: any): Promise<any[]>;
+    get(id: string, req: any): Promise<any>;
     setRead(id: string, body: {
         isRead: boolean;
-    }, req: any): Promise<import("./email.entity").EmailEntity | {
-        ok: boolean;
-    } | null>;
+    }, req: any): Promise<any>;
     classifyBatch(body: {
         emailIds: string[];
     }, req: any): Promise<{

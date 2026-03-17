@@ -13,6 +13,7 @@ const app_module_1 = require("./app.module");
 const express = require('express');
 const server = express();
 let app;
+const log = new common_1.Logger('LambdaHandler');
 async function bootstrap() {
     if (app)
         return;
@@ -31,7 +32,7 @@ async function handler(req, res) {
         await bootstrap();
     }
     catch (err) {
-        console.error('NestJS bootstrap failed:', err);
+        log.error(`NestJS bootstrap failed: ${err?.message ?? 'unknown error'}`);
         res.statusCode = 500;
         res.end(JSON.stringify({ error: 'Bootstrap failed', message: err.message }));
         return;

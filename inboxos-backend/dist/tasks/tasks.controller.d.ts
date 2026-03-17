@@ -6,5 +6,5 @@ import { TaskEntity } from './task.entity';
 export declare class TasksController extends BaseCrudController<TaskEntity, CreateTaskDto, UpdateTaskDto> {
     private readonly tasks;
     constructor(tasks: TasksService);
-    list(): Promise<TaskEntity[]>;
+    list(): any;
 }

@@ -12,6 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var JobRunnerService_1;
+var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobRunnerService = void 0;
 const common_1 = require("@nestjs/common");
@@ -210,8 +211,6 @@ exports.JobRunnerService = JobRunnerService = JobRunnerService_1 = __decorate([
     __param(4, (0, typeorm_1.InjectRepository)(email_insight_entity_1.EmailInsightEntity)),
     __metadata("design:paramtypes", [jobs_service_1.JobsService,
         ai_service_1.AiService,
-        settings_service_1.SettingsService,
-        typeorm_2.Repository,
-        typeorm_2.Repository])
+        settings_service_1.SettingsService, typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _b : Object])
 ], JobRunnerService);
 //# sourceMappingURL=job-runner.service.js.map

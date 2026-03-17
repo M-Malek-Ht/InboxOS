@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
@@ -10,6 +10,7 @@ const express = require('express');
 
 const server = express();
 let app: any;
+const log = new Logger('LambdaHandler');
 
 async function bootstrap() {
   if (app) return;
@@ -28,7 +29,7 @@ export default async function handler(req: any, res: any) {
   try {
     await bootstrap();
   } catch (err: any) {
-    console.error('NestJS bootstrap failed:', err);
+    log.error(`NestJS bootstrap failed: ${err?.message ?? 'unknown error'}`);
     res.statusCode = 500;
     res.end(JSON.stringify({ error: 'Bootstrap failed', message: err.message }));
     return;

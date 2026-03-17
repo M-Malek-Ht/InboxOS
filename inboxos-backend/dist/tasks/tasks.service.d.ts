@@ -5,7 +5,7 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 import { BaseEntityService } from '../base-entity.service';
 export declare class TasksService extends BaseEntityService<TaskEntity, CreateTaskDto, UpdateTaskDto> {
     constructor(repo: Repository<TaskEntity>);
-    list(): Promise<TaskEntity[]>;
-    create(dto: CreateTaskDto): Promise<TaskEntity>;
-    update(id: string, dto: UpdateTaskDto): Promise<TaskEntity>;
+    list(): any;
+    create(dto: CreateTaskDto): Promise<any>;
+    update(id: string, dto: UpdateTaskDto): Promise<any>;
 }

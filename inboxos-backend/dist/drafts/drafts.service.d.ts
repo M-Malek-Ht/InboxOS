@@ -7,7 +7,7 @@ export declare class DraftsService {
     private readonly emailsRepo;
     constructor(draftsRepo: Repository<DraftEntity>, emailsRepo: Repository<EmailEntity>);
     findEmailOrNull(emailId: string): Promise<EmailEntity | null>;
-    listByEmail(emailId: string): Promise<DraftEntity[]>;
+    listByEmail(emailId: string): any;
     listLatestDrafts(): Promise<DraftEntity[]>;
-    createDirectDraft(emailId: string, dto: CreateDraftDto): Promise<DraftEntity>;
+    createDirectDraft(emailId: string, dto: CreateDraftDto): Promise<any>;
 }

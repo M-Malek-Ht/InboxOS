@@ -95,15 +95,15 @@ export class EmailsService {
   }
 
   async getForUser(userId: string, emailId: string) {
-    console.log('[EmailsService] getForUser called with emailId:', emailId);
+    this.log.debug(`getForUser called with emailId=${emailId}`);
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
     if (accessToken) {
       try {
         const email = await this.gmail.getMessage(accessToken, emailId);
-        console.log('[EmailsService] Gmail getMessage returned:', email ? 'YES' : 'NO');
+        this.log.debug(`Gmail getMessage returned ${email ? 'a result' : 'no result'}`);
         return this.attachInsight(userId, email);
       } catch (error) {
-        console.error('[EmailsService] Gmail getMessage error:', error);
+        this.log.warn(`Gmail getMessage failed for emailId=${emailId}`);
         // Gmail fetch failed; fall through
       }
     }
@@ -113,10 +113,10 @@ export class EmailsService {
     if (msToken) {
       try {
         const email = await this.microsoftMail.getMessage(msToken, emailId);
-        console.log('[EmailsService] Microsoft getMessage returned:', email ? 'YES' : 'NO');
+        this.log.debug(`Microsoft getMessage returned ${email ? 'a result' : 'no result'}`);
         return this.attachInsight(userId, email);
       } catch (error) {
-        console.error('[EmailsService] Microsoft getMessage error:', error);
+        this.log.warn(`Microsoft getMessage failed for emailId=${emailId}`);
       }
     }
 
@@ -125,7 +125,7 @@ export class EmailsService {
   }
 
   async setReadState(userId: string, emailId: string, isRead: boolean) {
-    console.log('[EmailsService] setReadState called with emailId:', emailId, 'isRead:', isRead);
+    this.log.debug(`setReadState emailId=${emailId} isRead=${isRead}`);
     const accessToken = await this.gmail.getAccessTokenForUser(userId);
     if (accessToken) {
       if (isRead) {
@@ -163,7 +163,7 @@ export class EmailsService {
         }
         return [email];
       } catch (error) {
-        console.error('[EmailsService] Gmail getThread error:', error);
+        this.log.warn(`Gmail getThread failed for emailId=${emailId}`);
       }
     }
 
@@ -174,7 +174,7 @@ export class EmailsService {
         const email = await this.microsoftMail.getMessage(msToken, emailId);
         return [email];
       } catch (error) {
-        console.error('[EmailsService] Microsoft getThread error:', error);
+        this.log.warn(`Microsoft getThread failed for emailId=${emailId}`);
       }
     }
 

@@ -6,5 +6,5 @@ import { EventEntity } from './event.entity';
 export declare class EventsController extends BaseCrudController<EventEntity, CreateEventDto, UpdateEventDto> {
     private readonly events;
     constructor(events: EventsService);
-    list(from?: string, to?: string): Promise<EventEntity[]>;
+    list(from?: string, to?: string): any;
 }

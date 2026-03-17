@@ -1,5 +1,4 @@
-import { CreateEventDto } from './create-event.dto';
-declare const UpdateEventDto_base: import("@nestjs/mapped-types").MappedType<Partial<CreateEventDto>>;
+declare const UpdateEventDto_base: any;
 export declare class UpdateEventDto extends UpdateEventDto_base {
 }
 export {};

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -8,6 +8,8 @@ import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class AuthService {
+  private readonly log = new Logger(AuthService.name);
+
   constructor(
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -21,25 +23,19 @@ export class AuthService {
     providerId: string,
     refreshToken?: string,
   ): Promise<User> {
-    console.log('[AuthService] validateOrCreateOAuthUser called');
-    console.log('[AuthService] email:', email);
-    console.log('[AuthService] refreshToken received:', refreshToken ? 'YES' : 'NO');
-
     const account = await this.accountRepository.findOne({
       where: { provider, providerId },
       relations: ['user'],
     });
 
     if (account) {
-      console.log('[AuthService] Existing account found, userId:', account.userId);
       if (refreshToken && refreshToken !== account.refreshToken) {
-        console.log('[AuthService] Updating refresh token');
+        this.log.debug(`Updating ${provider} refresh token for userId=${account.userId}`);
         await this.accountRepository.update(account.id, { refreshToken });
       }
       return account.user;
     }
 
-    console.log('[AuthService] Creating new account');
     const user = await this.usersService.findOrCreate(email);
 
     await this.accountRepository.save(
@@ -50,7 +46,7 @@ export class AuthService {
         refreshToken: refreshToken ?? null,
       }),
     );
-    console.log('[AuthService] Account created with userId:', user.id);
+    this.log.log(`Linked ${provider} account for userId=${user.id}`);
 
     return user;
   }

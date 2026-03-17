@@ -1,6 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { AuthService } from '../auth.service';
-declare const MicrosoftStrategy_base: new (...args: any) => any;
+declare const MicrosoftStrategy_base: any;
 export declare class MicrosoftStrategy extends MicrosoftStrategy_base {
     private configService;
     private authService;

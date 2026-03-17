@@ -40,7 +40,6 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: { id: string; emails: { value: string }[] },
     done: VerifyCallback,
   ) {
-    console.log('[GoogleStrategy] validate called, refreshToken:', refreshToken ? 'YES' : 'NO');
     const user = await this.authService.validateOrCreateOAuthUser(
       profile.emails[0].value,
       'google',

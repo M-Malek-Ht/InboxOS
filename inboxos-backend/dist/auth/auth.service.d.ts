@@ -7,6 +7,7 @@ export declare class AuthService {
     private accountRepository;
     private usersService;
     private jwtService;
+    private readonly log;
     constructor(accountRepository: Repository<Account>, usersService: UsersService, jwtService: JwtService);
     validateOrCreateOAuthUser(email: string, provider: string, providerId: string, refreshToken?: string): Promise<User>;
     generateToken(user: User): string;

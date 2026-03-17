@@ -29,18 +29,28 @@ exports.AppModule = AppModule = __decorate([
             config_1.ConfigModule.forRoot({ isGlobal: true }),
             typeorm_1.TypeOrmModule.forRootAsync({
                 inject: [config_1.ConfigService],
-                useFactory: (cfg) => ({
-                    type: 'postgres',
-                    host: cfg.get('DB_HOST'),
-                    port: Number(cfg.get('DB_PORT')),
-                    username: cfg.get('DB_USER'),
-                    password: cfg.get('DB_PASS'),
-                    database: cfg.get('DB_NAME'),
-                    autoLoadEntities: true,
-                    synchronize: true,
-                    ssl: true,
-                    extra: { ssl: { rejectUnauthorized: false } },
-                }),
+                useFactory: (cfg) => {
+                    const isProduction = cfg.get('NODE_ENV') === 'production';
+                    const dbSyncRaw = cfg.get('DB_SYNC');
+                    const dbSslRaw = cfg.get('DB_SSL');
+                    const synchronize = dbSyncRaw
+                        ? dbSyncRaw.toLowerCase() === 'true'
+                        : !isProduction;
+                    const useSsl = dbSslRaw
+                        ? dbSslRaw.toLowerCase() === 'true'
+                        : isProduction;
+                    return {
+                        type: 'postgres',
+                        host: cfg.get('DB_HOST'),
+                        port: Number(cfg.get('DB_PORT')),
+                        username: cfg.get('DB_USER'),
+                        password: cfg.get('DB_PASS'),
+                        database: cfg.get('DB_NAME'),
+                        autoLoadEntities: true,
+                        synchronize,
+                        ssl: useSsl ? { rejectUnauthorized: false } : false,
+                    };
+                },
             }),
             emails_module_1.EmailsModule,
             tasks_module_1.TasksModule,

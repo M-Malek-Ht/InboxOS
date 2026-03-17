@@ -12,6 +12,7 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var EmailsService_1;
+var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -89,34 +90,34 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return this.attachInsights(userId, emails);
     }
     async getForUser(userId, emailId) {
-        console.log('[EmailsService] getForUser called with emailId:', emailId);
+        this.log.debug(`getForUser called with emailId=${emailId}`);
         const accessToken = await this.gmail.getAccessTokenForUser(userId);
         if (accessToken) {
             try {
                 const email = await this.gmail.getMessage(accessToken, emailId);
-                console.log('[EmailsService] Gmail getMessage returned:', email ? 'YES' : 'NO');
+                this.log.debug(`Gmail getMessage returned ${email ? 'a result' : 'no result'}`);
                 return this.attachInsight(userId, email);
             }
             catch (error) {
-                console.error('[EmailsService] Gmail getMessage error:', error);
+                this.log.warn(`Gmail getMessage failed for emailId=${emailId}`);
             }
         }
         const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
         if (msToken) {
             try {
                 const email = await this.microsoftMail.getMessage(msToken, emailId);
-                console.log('[EmailsService] Microsoft getMessage returned:', email ? 'YES' : 'NO');
+                this.log.debug(`Microsoft getMessage returned ${email ? 'a result' : 'no result'}`);
                 return this.attachInsight(userId, email);
             }
             catch (error) {
-                console.error('[EmailsService] Microsoft getMessage error:', error);
+                this.log.warn(`Microsoft getMessage failed for emailId=${emailId}`);
             }
         }
         const email = await this.repo.findOne({ where: { id: emailId } });
         return this.attachInsight(userId, email);
     }
     async setReadState(userId, emailId, isRead) {
-        console.log('[EmailsService] setReadState called with emailId:', emailId, 'isRead:', isRead);
+        this.log.debug(`setReadState emailId=${emailId} isRead=${isRead}`);
         const accessToken = await this.gmail.getAccessTokenForUser(userId);
         if (accessToken) {
             if (isRead) {
@@ -152,7 +153,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 return [email];
             }
             catch (error) {
-                console.error('[EmailsService] Gmail getThread error:', error);
+                this.log.warn(`Gmail getThread failed for emailId=${emailId}`);
             }
         }
         const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
@@ -162,7 +163,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 return [email];
             }
             catch (error) {
-                console.error('[EmailsService] Microsoft getThread error:', error);
+                this.log.warn(`Microsoft getThread failed for emailId=${emailId}`);
             }
         }
         const email = await this.repo.findOne({ where: { id: emailId } });
@@ -419,11 +420,7 @@ exports.EmailsService = EmailsService = EmailsService_1 = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(email_insight_entity_1.EmailInsightEntity)),
     __param(2, (0, typeorm_1.InjectRepository)(draft_entity_1.DraftEntity)),
     __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.Repository,
-        gmail_service_1.GmailService,
+    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _b : Object, typeof (_c = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _c : Object, typeof (_d = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _d : Object, gmail_service_1.GmailService,
         microsoft_mail_service_1.MicrosoftMailService])
 ], EmailsService);
 //# sourceMappingURL=emails.service.js.map
