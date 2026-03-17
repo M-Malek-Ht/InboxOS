@@ -44,3 +44,4 @@ export class EventsService extends BaseEntityService<EventEntity, CreateEventDto
 
     return this.repo.save(event);
   }
+}

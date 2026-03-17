@@ -42,3 +42,4 @@ export class TasksService extends BaseEntityService<TaskEntity, CreateTaskDto, U
 
     return this.repo.save(task);
   }
+}

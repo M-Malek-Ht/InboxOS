@@ -1,12 +1,11 @@
 import { Body, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { BaseEntityService } from '../base-entity.service';
+import { JwtAuthGuard } from 'auth/guards/jwt-auth.guard';
+import { BaseEntityService } from 'base-entity.service';
 
 @UseGuards(JwtAuthGuard)
-export abstract class BaseCrudController<T, CreateDto, UpdateDto> {
+export abstract class BaseCrudController<T extends { id: string }, CreateDto, UpdateDto> {
   constructor(protected readonly service: BaseEntityService<T, CreateDto, UpdateDto>) {}
 
-  @Get()
   abstract list();
 
   @Post()

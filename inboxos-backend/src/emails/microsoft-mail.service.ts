@@ -16,6 +16,10 @@ export class MicrosoftMailService extends EmailProviderService {
     super(accountRepo, configService);
   }
 
+  get providerName(): string {
+    return 'microsoft';
+  }
+
   // ── token management ────────────────────────────────
 
   protected async refreshAccessToken(refreshToken: string): Promise<string> {

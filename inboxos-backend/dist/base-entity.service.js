@@ -9,23 +9,24 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TasksController = void 0;
+exports.BaseEntityService = void 0;
 const common_1 = require("@nestjs/common");
-const tasks_service_1 = require("./tasks.service");
-const base_crud_controller_1 = require("../base-crud.controller");
-let TasksController = class TasksController extends base_crud_controller_1.BaseCrudController {
-    tasks;
-    constructor(tasks) {
-        super(tasks);
-        this.tasks = tasks;
+const typeorm_1 = require("typeorm");
+let BaseEntityService = class BaseEntityService {
+    repo;
+    constructor(repo) {
+        this.repo = repo;
     }
-    list() {
-        return this.tasks.list();
+    async remove(id) {
+        const res = await this.repo.delete({ id });
+        if (res.affected === 0)
+            throw new common_1.NotFoundException(`${this.repo.metadata.name} not found`);
+        return { ok: true };
     }
 };
-exports.TasksController = TasksController;
-exports.TasksController = TasksController = __decorate([
-    (0, common_1.Controller)('tasks'),
-    __metadata("design:paramtypes", [tasks_service_1.TasksService])
-], TasksController);
-//# sourceMappingURL=tasks.controller.js.map
+exports.BaseEntityService = BaseEntityService;
+exports.BaseEntityService = BaseEntityService = __decorate([
+    (0, common_1.Injectable)(),
+    __metadata("design:paramtypes", [typeorm_1.Repository])
+], BaseEntityService);
+//# sourceMappingURL=base-entity.service.js.map

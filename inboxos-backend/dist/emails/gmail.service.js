@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var GmailService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GmailService = void 0;
 const common_1 = require("@nestjs/common");
@@ -19,21 +18,13 @@ const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const account_entity_1 = require("../auth/account.entity");
-let GmailService = GmailService_1 = class GmailService {
-    accountRepo;
-    configService;
-    log = new common_1.Logger(GmailService_1.name);
-    constructor(accountRepo, configService) {
-        this.accountRepo = accountRepo;
-        this.configService = configService;
+const email_provider_service_1 = require("./email-provider.service");
+let GmailService = class GmailService extends email_provider_service_1.EmailProviderService {
+    get providerName() {
+        return 'google';
     }
-    async getAccessTokenForUser(userId) {
-        const account = await this.accountRepo.findOne({
-            where: { userId, provider: 'google' },
-        });
-        if (!account?.refreshToken)
-            return null;
-        return this.refreshAccessToken(account.refreshToken);
+    constructor(accountRepo, configService) {
+        super(accountRepo, configService);
     }
     async refreshAccessToken(refreshToken) {
         const res = await fetch('https://oauth2.googleapis.com/token', {
@@ -201,34 +192,49 @@ let GmailService = GmailService_1 = class GmailService {
     async listSentEmails(accessToken, options = {}) {
         const params = new URLSearchParams();
         params.set('maxResults', String(options.maxResults ?? 40));
-        params.set('labelIds', 'SENT');
+        const qParts = ['in:sent'];
         if (options.search)
-            params.set('q', options.search);
+            qParts.push(options.search);
+        params.set('q', qParts.join(' '));
         const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
         const listRes = await fetch(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
+        if (!listRes.ok) {
+            const err = await listRes.json().catch(() => ({}));
+            throw new Error(err.error?.message ?? `Gmail sent list failed: ${listRes.status}`);
+        }
         const listData = await listRes.json();
         if (!listData.messages)
             return [];
-        const messages = await Promise.all(listData.messages.map((m) => this.fetchAndParse(accessToken, m.id)));
-        return messages;
+        const results = await Promise.allSettled(listData.messages.map((m) => this.fetchAndParse(accessToken, m.id)));
+        return results
+            .filter((r) => r.status === 'fulfilled')
+            .map((r) => r.value);
     }
     async listTrashEmails(accessToken, options = {}) {
         const params = new URLSearchParams();
         params.set('maxResults', String(options.maxResults ?? 40));
-        params.set('labelIds', 'TRASH');
+        params.set('includeSpamTrash', 'true');
+        const qParts = ['in:trash'];
         if (options.search)
-            params.set('q', options.search);
+            qParts.push(options.search);
+        params.set('q', qParts.join(' '));
         const url = `https://www.googleapis.com/gmail/v1/users/me/messages?${params.toString()}`;
         const listRes = await fetch(url, {
             headers: { Authorization: `Bearer ${accessToken}` },
         });
+        if (!listRes.ok) {
+            const err = await listRes.json().catch(() => ({}));
+            throw new Error(err.error?.message ?? `Gmail trash list failed: ${listRes.status}`);
+        }
         const listData = await listRes.json();
         if (!listData.messages)
             return [];
-        const messages = await Promise.all(listData.messages.map((m) => this.fetchAndParse(accessToken, m.id)));
-        return messages;
+        const results = await Promise.allSettled(listData.messages.map((m) => this.fetchAndParse(accessToken, m.id)));
+        return results
+            .filter((r) => r.status === 'fulfilled')
+            .map((r) => r.value);
     }
     async untrashMessage(accessToken, messageId) {
         const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}/untrash`;
@@ -250,6 +256,17 @@ let GmailService = GmailService_1 = class GmailService {
         if (!res.ok) {
             const error = await res.json();
             throw new Error(error.error?.message ?? 'Failed to trash message');
+        }
+    }
+    async permanentlyDeleteMessage(accessToken, messageId) {
+        const url = `https://www.googleapis.com/gmail/v1/users/me/messages/${messageId}`;
+        const res = await fetch(url, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (!res.ok && res.status !== 204) {
+            const error = await res.json().catch(() => ({}));
+            throw new Error(error.error?.message ?? 'Failed to permanently delete message');
         }
     }
     async fetchAndParse(accessToken, messageId) {
@@ -326,7 +343,7 @@ let GmailService = GmailService_1 = class GmailService {
     }
 };
 exports.GmailService = GmailService;
-exports.GmailService = GmailService = GmailService_1 = __decorate([
+exports.GmailService = GmailService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(account_entity_1.Account)),
     __metadata("design:paramtypes", [typeorm_2.Repository,

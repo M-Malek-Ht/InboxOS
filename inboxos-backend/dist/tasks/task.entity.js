@@ -35,11 +35,11 @@ __decorate([
     __metadata("design:type", String)
 ], TaskEntity.prototype, "description", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'todo' }),
+    (0, typeorm_1.Column)({ default: 'Backlog' }),
     __metadata("design:type", String)
 ], TaskEntity.prototype, "status", void 0);
 __decorate([
-    (0, typeorm_1.Column)({ default: 'medium' }),
+    (0, typeorm_1.Column)({ default: 'Med' }),
     __metadata("design:type", String)
 ], TaskEntity.prototype, "priority", void 0);
 __decorate([

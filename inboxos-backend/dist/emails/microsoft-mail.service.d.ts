@@ -1,13 +1,12 @@
 import { ConfigService } from '@nestjs/config';
 import { Repository } from 'typeorm';
 import { Account } from '../auth/account.entity';
-import { ParsedEmail } from './gmail.service';
-export declare class MicrosoftMailService {
-    private accountRepo;
-    private configService;
+import { ParsedEmail } from './email.types';
+import { EmailProviderService } from './email-provider.service';
+export declare class MicrosoftMailService extends EmailProviderService {
     constructor(accountRepo: Repository<Account>, configService: ConfigService);
-    getAccessTokenForUser(userId: string): Promise<string | null>;
-    private refreshAccessToken;
+    get providerName(): string;
+    protected refreshAccessToken(refreshToken: string): Promise<string>;
     listEmails(accessToken: string, options?: {
         maxResults?: number;
         filter?: string;
@@ -17,15 +16,15 @@ export declare class MicrosoftMailService {
     markAsRead(accessToken: string, messageId: string): Promise<void>;
     markAsUnread(accessToken: string, messageId: string): Promise<void>;
     sendReply(accessToken: string, messageId: string, body: string): Promise<void>;
-    listSentEmails(_accessToken: string, _options?: {
+    listSentEmails(accessToken: string, options?: {
         maxResults?: number;
         search?: string;
     }): Promise<ParsedEmail[]>;
-    listTrashEmails(_accessToken: string, _options?: {
+    listTrashEmails(accessToken: string, options?: {
         maxResults?: number;
         search?: string;
     }): Promise<ParsedEmail[]>;
-    untrashMessage(_accessToken: string, _messageId: string): Promise<void>;
+    untrashMessage(accessToken: string, messageId: string): Promise<void>;
     deleteMessage(accessToken: string, messageId: string): Promise<void>;
     private setReadState;
     private parseMessage;
