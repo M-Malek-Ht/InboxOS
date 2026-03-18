@@ -34,12 +34,17 @@ export class JobRunnerService {
    * immediately so the controller can respond to the client.
    */
   async enqueue(type: string, payload: Record<string, any>): Promise<string> {
-    const job = await this.jobs.create(type, payload);
+    const userId = this.getUserIdFromPayload(payload);
+    if (!userId) {
+      throw new Error(`Missing userId in payload for job type: ${type}`);
+    }
+
+    const job = await this.jobs.create(type, payload, userId);
     this.log.log(`Job ${job.id} [${type}] queued`);
 
     // fire-and-forget — intentionally not awaited
-    this.process(job.id, type, payload).catch((err) =>
-      this.log.error(`Unhandled error in job ${job.id}: ${err.message}`),
+    this.process(job.id, type, payload).catch((err: any) =>
+      this.log.error(`Unhandled error in job ${job.id}: ${this.getErrorMessage(err)}`),
     );
 
     return job.id;
@@ -77,8 +82,9 @@ export class JobRunnerService {
       await this.jobs.markDone(jobId, result);
       this.log.log(`Job ${jobId} [${type}] done`);
     } catch (err: any) {
-      this.log.error(`Job ${jobId} [${type}] failed: ${err.message}`);
-      await this.jobs.markFailed(jobId, err.message);
+      const message = this.getErrorMessage(err);
+      this.log.error(`Job ${jobId} [${type}] failed: ${message}`);
+      await this.jobs.markFailed(jobId, message);
     }
   }
 
@@ -264,5 +270,27 @@ export class JobRunnerService {
       tone: saved.tone,
       length: saved.length,
     };
+  }
+
+  private getUserIdFromPayload(payload: Record<string, any>): string | null {
+    const userId = payload?.userId;
+    return typeof userId === 'string' && userId.length > 0 ? userId : null;
+  }
+
+  private getErrorMessage(err: unknown): string {
+    if (!err) return 'unknown error';
+
+    if (err instanceof Error) {
+      return err.message;
+    }
+
+    if (typeof err === 'object') {
+      const maybeErr = err as Record<string, unknown>;
+      const nested = maybeErr.error as Record<string, unknown> | undefined;
+      if (typeof nested?.message === 'string') return nested.message;
+      if (typeof maybeErr.message === 'string') return maybeErr.message;
+    }
+
+    return String(err);
   }
 }

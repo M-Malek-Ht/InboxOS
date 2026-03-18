@@ -20,6 +20,9 @@ export interface GenerateDraftOptions {
 export class AiService {
   private client: Anthropic;
   private models: string[];
+  private static readonly MAX_CLASSIFY_BODY_CHARS = 12000;
+  private static readonly MAX_DRAFT_BODY_CHARS = 16000;
+  private static readonly MAX_INSTRUCTION_CHARS = 1000;
 
   constructor(private configService: ConfigService) {
     this.client = new Anthropic({
@@ -37,6 +40,13 @@ export class AiService {
     subject: string;
     body: string;
   }): Promise<ClassifyResult> {
+    const safeFrom = this.truncateForPrompt(email.from, 320);
+    const safeSubject = this.truncateForPrompt(email.subject, 500);
+    const safeBody = this.truncateForPrompt(
+      email.body,
+      AiService.MAX_CLASSIFY_BODY_CHARS,
+    );
+
     const message = await this.createUserMessage(
       `Analyze the following email and return a JSON object with these fields:
 - "category": one of "Meetings", "Work", "Personal", "Bills", "Newsletters", "Support", "Other"
@@ -47,16 +57,16 @@ export class AiService {
 
 Return ONLY the JSON object, no markdown, no explanation.
 
-From: ${email.from}
-Subject: ${email.subject}
+From: ${safeFrom}
+Subject: ${safeSubject}
 Body:
-${email.body}`,
+${safeBody}`,
       1024,
     );
 
     const text =
       message.content[0].type === 'text' ? message.content[0].text : '';
-    const result = JSON.parse(text);
+    const result = this.parseJsonObject(text);
 
     return {
       category: result.category ?? 'Other',
@@ -88,22 +98,33 @@ ${email.body}`,
     const toneInstruction = toneGuide[options.tone] || toneGuide['Professional'];
     const lengthInstruction = lengthGuide[options.length] || lengthGuide['Medium'];
 
+    const safeFrom = this.truncateForPrompt(email.from, 320);
+    const safeSubject = this.truncateForPrompt(email.subject, 500);
+    const safeBody = this.truncateForPrompt(
+      email.body,
+      AiService.MAX_DRAFT_BODY_CHARS,
+    );
+
     let prompt = `Draft a reply to the following email.
 
 ${toneInstruction}
 ${lengthInstruction}`;
 
     if (options.instruction) {
-      prompt += `\n\nAdditional instructions from the user: ${options.instruction}`;
+      const safeInstruction = this.truncateForPrompt(
+        options.instruction,
+        AiService.MAX_INSTRUCTION_CHARS,
+      );
+      prompt += `\n\nAdditional instructions from the user: ${safeInstruction}`;
     }
 
     prompt += `
 
 Original email:
-From: ${email.from}
-Subject: ${email.subject}
+From: ${safeFrom}
+Subject: ${safeSubject}
 Body:
-${email.body}
+${safeBody}
 
 Write ONLY the reply body text. Do not include "Subject:", "To:", greeting headers, or email metadata. Start directly with the greeting (e.g. "Hi [Name],").`;
 
@@ -142,8 +163,11 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
         });
       } catch (error: any) {
         const status = error?.status ?? error?.error?.status;
-        if (status === 429 && attempt < maxRetries) {
-          const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
+        const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+        if (transient && attempt < maxRetries) {
+          const base = Math.min(1500 * Math.pow(2, attempt), 30000);
+          const jitter = Math.floor(Math.random() * 500);
+          const delay = base + jitter;
           await new Promise((r) => setTimeout(r, delay));
           continue;
         }
@@ -171,5 +195,34 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
       error?.message ??
       String(error)
     );
+  }
+
+  private truncateForPrompt(value: unknown, maxChars: number): string {
+    const text = typeof value === 'string' ? value : String(value ?? '');
+    if (text.length <= maxChars) return text;
+    return `${text.slice(0, maxChars)}\n[truncated]`;
+  }
+
+  private parseJsonObject(text: string): Record<string, any> {
+    const trimmed = text.trim();
+
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // Fall through and try extracting first JSON object block.
+    }
+
+    const start = trimmed.indexOf('{');
+    const end = trimmed.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      const candidate = trimmed.slice(start, end + 1);
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // fallthrough
+      }
+    }
+
+    throw new Error('Invalid JSON returned by AI classify response');
   }
 }

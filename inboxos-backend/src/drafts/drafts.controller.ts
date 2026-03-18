@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Request, UseGuards, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DraftsService } from './drafts.service';
 import { CreateDraftDto } from './dto/create-draft.dto';
@@ -21,6 +21,7 @@ export class DraftsController {
   @UseGuards(JwtAuthGuard)
   async create(
     @Param('emailId') emailId: string,
+    @Request() req: any,
     @Body() dto: CreateDraftDto,
   ) {
     // If content is provided, save directly (manual edit / paste)
@@ -50,6 +51,7 @@ export class DraftsController {
     }
 
     const jobId = await this.runner.enqueue('draft', {
+      userId: req.user.id,
       emailId,
       from,
       subject,

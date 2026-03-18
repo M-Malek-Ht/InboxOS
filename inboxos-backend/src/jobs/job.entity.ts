@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
   UpdateDateColumn,
 } from 'typeorm';
 
@@ -10,6 +11,10 @@ import {
 export class JobEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;
+
+  @Index()
+  @Column({ type: 'uuid', nullable: true })
+  userId: string | null;
 
   /** classify | draft | extractDates  — extensible for workflows, calendar, etc. */
   @Column()
