@@ -12,7 +12,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var JobRunnerService_1;
-var _a, _b;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobRunnerService = void 0;
 const common_1 = require("@nestjs/common");
@@ -38,9 +37,13 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
         this.insightsRepo = insightsRepo;
     }
     async enqueue(type, payload) {
-        const job = await this.jobs.create(type, payload);
+        const userId = this.getUserIdFromPayload(payload);
+        if (!userId) {
+            throw new Error(`Missing userId in payload for job type: ${type}`);
+        }
+        const job = await this.jobs.create(type, payload, userId);
         this.log.log(`Job ${job.id} [${type}] queued`);
-        this.process(job.id, type, payload).catch((err) => this.log.error(`Unhandled error in job ${job.id}: ${err.message}`));
+        this.process(job.id, type, payload).catch((err) => this.log.error(`Unhandled error in job ${job.id}: ${this.getErrorMessage(err)}`));
         return job.id;
     }
     async process(jobId, type, payload) {
@@ -67,8 +70,9 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
             this.log.log(`Job ${jobId} [${type}] done`);
         }
         catch (err) {
-            this.log.error(`Job ${jobId} [${type}] failed: ${err.message}`);
-            await this.jobs.markFailed(jobId, err.message);
+            const message = this.getErrorMessage(err);
+            this.log.error(`Job ${jobId} [${type}] failed: ${message}`);
+            await this.jobs.markFailed(jobId, message);
         }
     }
     async handleClassify(payload) {
@@ -203,6 +207,26 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
             length: saved.length,
         };
     }
+    getUserIdFromPayload(payload) {
+        const userId = payload?.userId;
+        return typeof userId === 'string' && userId.length > 0 ? userId : null;
+    }
+    getErrorMessage(err) {
+        if (!err)
+            return 'unknown error';
+        if (err instanceof Error) {
+            return err.message;
+        }
+        if (typeof err === 'object') {
+            const maybeErr = err;
+            const nested = maybeErr.error;
+            if (typeof nested?.message === 'string')
+                return nested.message;
+            if (typeof maybeErr.message === 'string')
+                return maybeErr.message;
+        }
+        return String(err);
+    }
 };
 exports.JobRunnerService = JobRunnerService;
 exports.JobRunnerService = JobRunnerService = JobRunnerService_1 = __decorate([
@@ -211,6 +235,8 @@ exports.JobRunnerService = JobRunnerService = JobRunnerService_1 = __decorate([
     __param(4, (0, typeorm_1.InjectRepository)(email_insight_entity_1.EmailInsightEntity)),
     __metadata("design:paramtypes", [jobs_service_1.JobsService,
         ai_service_1.AiService,
-        settings_service_1.SettingsService, typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _b : Object])
+        settings_service_1.SettingsService,
+        typeorm_2.Repository,
+        typeorm_2.Repository])
 ], JobRunnerService);
 //# sourceMappingURL=job-runner.service.js.map

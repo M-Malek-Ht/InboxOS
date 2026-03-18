@@ -11,23 +11,32 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EventsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const event_entity_1 = require("./event.entity");
-const base_entity_service_1 = require("../base-entity.service");
-let EventsService = class EventsService extends base_entity_service_1.BaseEntityService {
+let EventsService = class EventsService {
+    repo;
     constructor(repo) {
-        super(repo);
+        this.repo = repo;
     }
-    list(from, to) {
-        return this.repo.find({ order: { startAt: 'ASC' } });
+    listForUser(userId, from, to) {
+        const qb = this.repo
+            .createQueryBuilder('event')
+            .where('event.userId = :userId', { userId });
+        if (from) {
+            qb.andWhere('event.endAt >= :from', { from: new Date(from) });
+        }
+        if (to) {
+            qb.andWhere('event.startAt <= :to', { to: new Date(to) });
+        }
+        return qb.orderBy('event.startAt', 'ASC').getMany();
     }
-    async create(dto) {
+    async createForUser(userId, dto) {
         const event = this.repo.create({
+            userId,
             title: dto.title,
             startAt: new Date(dto.startAt),
             endAt: new Date(dto.endAt),
@@ -36,8 +45,8 @@ let EventsService = class EventsService extends base_entity_service_1.BaseEntity
         });
         return this.repo.save(event);
     }
-    async update(id, dto) {
-        const event = await this.repo.findOne({ where: { id } });
+    async updateForUser(userId, id, dto) {
+        const event = await this.repo.findOne({ where: { id, userId } });
         if (!event)
             throw new common_1.NotFoundException('Event not found');
         if (dto.title !== undefined)
@@ -52,11 +61,17 @@ let EventsService = class EventsService extends base_entity_service_1.BaseEntity
             event.notes = dto.notes ?? '';
         return this.repo.save(event);
     }
+    async removeForUser(userId, id) {
+        const res = await this.repo.delete({ id, userId });
+        if (res.affected === 0)
+            throw new common_1.NotFoundException('Event not found');
+        return { ok: true };
+    }
 };
 exports.EventsService = EventsService;
 exports.EventsService = EventsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(event_entity_1.EventEntity)),
-    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [typeorm_2.Repository])
 ], EventsService);
 //# sourceMappingURL=events.service.js.map

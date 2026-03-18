@@ -1,5 +1,6 @@
 export declare class JobEntity {
     id: string;
+    userId: string | null;
     type: string;
     status: string;
     payload: Record<string, any> | null;

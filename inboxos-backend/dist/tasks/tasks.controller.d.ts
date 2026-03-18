@@ -1,10 +1,13 @@
 import { TasksService } from './tasks.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
-import { BaseCrudController } from '../base-crud.controller';
-import { TaskEntity } from './task.entity';
-export declare class TasksController extends BaseCrudController<TaskEntity, CreateTaskDto, UpdateTaskDto> {
+export declare class TasksController {
     private readonly tasks;
     constructor(tasks: TasksService);
-    list(): any;
+    list(req: any): Promise<import("./task.entity").TaskEntity[]>;
+    create(req: any, dto: CreateTaskDto): Promise<import("./task.entity").TaskEntity>;
+    update(req: any, id: string, dto: UpdateTaskDto): Promise<import("./task.entity").TaskEntity>;
+    remove(req: any, id: string): Promise<{
+        ok: boolean;
+    }>;
 }

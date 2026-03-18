@@ -2,10 +2,13 @@ import { Repository } from 'typeorm';
 import { EventEntity } from './event.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-import { BaseEntityService } from '../base-entity.service';
-export declare class EventsService extends BaseEntityService<EventEntity, CreateEventDto, UpdateEventDto> {
+export declare class EventsService {
+    private readonly repo;
     constructor(repo: Repository<EventEntity>);
-    list(from?: string, to?: string): any;
-    create(dto: CreateEventDto): Promise<any>;
-    update(id: string, dto: UpdateEventDto): Promise<any>;
+    listForUser(userId: string, from?: string, to?: string): Promise<EventEntity[]>;
+    createForUser(userId: string, dto: CreateEventDto): Promise<EventEntity>;
+    updateForUser(userId: string, id: string, dto: UpdateEventDto): Promise<EventEntity>;
+    removeForUser(userId: string, id: string): Promise<{
+        ok: boolean;
+    }>;
 }

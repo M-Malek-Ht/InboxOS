@@ -11,23 +11,26 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TasksService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const task_entity_1 = require("./task.entity");
-const base_entity_service_1 = require("../base-entity.service");
-let TasksService = class TasksService extends base_entity_service_1.BaseEntityService {
+let TasksService = class TasksService {
+    repo;
     constructor(repo) {
-        super(repo);
+        this.repo = repo;
     }
-    list() {
-        return this.repo.find({ order: { createdAt: 'DESC' } });
+    listForUser(userId) {
+        return this.repo.find({
+            where: { userId },
+            order: { createdAt: 'DESC' },
+        });
     }
-    async create(dto) {
+    async createForUser(userId, dto) {
         const task = this.repo.create({
+            userId,
             title: dto.title,
             description: dto.description ?? '',
             status: dto.status ?? 'Backlog',
@@ -36,8 +39,8 @@ let TasksService = class TasksService extends base_entity_service_1.BaseEntitySe
         });
         return this.repo.save(task);
     }
-    async update(id, dto) {
-        const task = await this.repo.findOne({ where: { id } });
+    async updateForUser(userId, id, dto) {
+        const task = await this.repo.findOne({ where: { id, userId } });
         if (!task)
             throw new common_1.NotFoundException('Task not found');
         if (dto.title !== undefined)
@@ -52,11 +55,17 @@ let TasksService = class TasksService extends base_entity_service_1.BaseEntitySe
             task.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
         return this.repo.save(task);
     }
+    async removeForUser(userId, id) {
+        const res = await this.repo.delete({ id, userId });
+        if (res.affected === 0)
+            throw new common_1.NotFoundException('Task not found');
+        return { ok: true };
+    }
 };
 exports.TasksService = TasksService;
 exports.TasksService = TasksService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(task_entity_1.TaskEntity)),
-    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [typeorm_2.Repository])
 ], TasksService);
 //# sourceMappingURL=tasks.service.js.map

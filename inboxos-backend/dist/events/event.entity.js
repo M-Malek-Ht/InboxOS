@@ -13,6 +13,7 @@ exports.EventEntity = void 0;
 const typeorm_1 = require("typeorm");
 let EventEntity = class EventEntity {
     id;
+    userId;
     title;
     startAt;
     endAt;
@@ -26,6 +27,11 @@ __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
     __metadata("design:type", String)
 ], EventEntity.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)({ type: 'uuid' }),
+    __metadata("design:type", String)
+], EventEntity.prototype, "userId", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)

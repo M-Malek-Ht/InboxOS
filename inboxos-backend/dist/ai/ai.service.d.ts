@@ -15,6 +15,9 @@ export declare class AiService {
     private configService;
     private client;
     private models;
+    private static readonly MAX_CLASSIFY_BODY_CHARS;
+    private static readonly MAX_DRAFT_BODY_CHARS;
+    private static readonly MAX_INSTRUCTION_CHARS;
     constructor(configService: ConfigService);
     classifyEmail(email: {
         from: string;
@@ -30,4 +33,6 @@ export declare class AiService {
     private callWithRetry;
     private isModelAccessError;
     private getErrorMessage;
+    private truncateForPrompt;
+    private parseJsonObject;
 }

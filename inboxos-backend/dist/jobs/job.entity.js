@@ -13,6 +13,7 @@ exports.JobEntity = void 0;
 const typeorm_1 = require("typeorm");
 let JobEntity = class JobEntity {
     id;
+    userId;
     type;
     status;
     payload;
@@ -26,6 +27,11 @@ __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
     __metadata("design:type", String)
 ], JobEntity.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)({ type: 'uuid', nullable: true }),
+    __metadata("design:type", Object)
+], JobEntity.prototype, "userId", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)

@@ -3,8 +3,9 @@ import { JobEntity } from './job.entity';
 export declare class JobsService {
     private readonly repo;
     constructor(repo: Repository<JobEntity>);
-    create(type: string, payload: Record<string, any>): Promise<JobEntity>;
+    create(type: string, payload: Record<string, any>, userId?: string): Promise<JobEntity>;
     findById(id: string): Promise<JobEntity>;
+    findByIdForUser(id: string, userId: string): Promise<JobEntity>;
     markProcessing(id: string): Promise<void>;
     markDone(id: string, result: Record<string, any>): Promise<void>;
     markFailed(id: string, error: string): Promise<void>;

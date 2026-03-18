@@ -4,6 +4,7 @@ import { EmailInsightEntity } from './email-insight.entity';
 import { DraftEntity } from '../drafts/draft.entity';
 import { User } from '../users/entities/user.entity';
 import { GmailService } from './gmail.service';
+import { ParsedEmail } from './email.types';
 import { MicrosoftMailService } from './microsoft-mail.service';
 export declare class EmailsService {
     private readonly repo;
@@ -19,12 +20,12 @@ export declare class EmailsService {
         filter?: string;
         search?: string;
         limit?: number;
-    }): Promise<{
-        id: string;
-    }[]>;
-    getForUser(userId: string, emailId: string): Promise<any>;
-    setReadState(userId: string, emailId: string, isRead: boolean): Promise<any>;
-    getThread(userId: string, emailId: string): Promise<any[]>;
+    }): Promise<ParsedEmail[] | EmailEntity[]>;
+    getForUser(userId: string, emailId: string): Promise<EmailEntity | ParsedEmail | null>;
+    setReadState(userId: string, emailId: string, isRead: boolean): Promise<EmailEntity | {
+        ok: boolean;
+    } | null>;
+    getThread(userId: string, emailId: string): Promise<ParsedEmail[] | EmailEntity[]>;
     sendReply(userId: string, emailId: string, body: string): Promise<{
         ok: boolean;
         provider: "gmail";
@@ -38,11 +39,11 @@ export declare class EmailsService {
     listSentForUser(userId: string, options?: {
         search?: string;
         limit?: number;
-    }): Promise<any>;
+    }): Promise<ParsedEmail[] | EmailEntity[]>;
     listTrashForUser(userId: string, options?: {
         search?: string;
         limit?: number;
-    }): Promise<any>;
+    }): Promise<EmailEntity[]>;
     untrashEmail(userId: string, emailId: string): Promise<{
         ok: boolean;
         provider: "provider" | "local";

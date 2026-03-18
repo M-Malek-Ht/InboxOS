@@ -12,7 +12,6 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
 var EmailsService_1;
-var _a, _b, _c, _d;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -420,7 +419,11 @@ exports.EmailsService = EmailsService = EmailsService_1 = __decorate([
     __param(1, (0, typeorm_1.InjectRepository)(email_insight_entity_1.EmailInsightEntity)),
     __param(2, (0, typeorm_1.InjectRepository)(draft_entity_1.DraftEntity)),
     __param(3, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
-    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object, typeof (_b = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _b : Object, typeof (_c = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _c : Object, typeof (_d = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _d : Object, gmail_service_1.GmailService,
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        typeorm_2.Repository,
+        gmail_service_1.GmailService,
         microsoft_mail_service_1.MicrosoftMailService])
 ], EmailsService);
 //# sourceMappingURL=emails.service.js.map

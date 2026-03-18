@@ -28,7 +28,7 @@ let DraftsController = class DraftsController {
     list(emailId) {
         return this.drafts.listByEmail(emailId);
     }
-    async create(emailId, dto) {
+    async create(emailId, req, dto) {
         if (dto.content) {
             return this.drafts.createDirectDraft(emailId, dto);
         }
@@ -47,6 +47,7 @@ let DraftsController = class DraftsController {
             throw new common_1.BadRequestException('Email context required: provide emailFrom/emailSubject/emailBody in the request body');
         }
         const jobId = await this.runner.enqueue('draft', {
+            userId: req.user.id,
             emailId,
             from,
             subject,
@@ -71,9 +72,10 @@ __decorate([
     (0, common_1.Post)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('emailId')),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Request)()),
+    __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, create_draft_dto_1.CreateDraftDto]),
+    __metadata("design:paramtypes", [String, Object, create_draft_dto_1.CreateDraftDto]),
     __metadata("design:returntype", Promise)
 ], DraftsController.prototype, "create", null);
 exports.DraftsController = DraftsController = __decorate([

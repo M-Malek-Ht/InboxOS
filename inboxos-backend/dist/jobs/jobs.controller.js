@@ -21,8 +21,8 @@ let JobsController = class JobsController {
     constructor(jobs) {
         this.jobs = jobs;
     }
-    async get(id) {
-        const job = await this.jobs.findById(id);
+    async get(id, req) {
+        const job = await this.jobs.findByIdForUser(id, req.user.id);
         return {
             id: job.id,
             type: job.type,
@@ -37,8 +37,9 @@ __decorate([
     (0, common_1.Get)(':id'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('id')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], JobsController.prototype, "get", null);
 exports.JobsController = JobsController = __decorate([

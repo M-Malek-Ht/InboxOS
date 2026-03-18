@@ -18,4 +18,6 @@ export declare class JobRunnerService {
     private handleClassifyBatch;
     private handleAutoDraftBatch;
     private handleDraft;
+    private getUserIdFromPayload;
+    private getErrorMessage;
 }

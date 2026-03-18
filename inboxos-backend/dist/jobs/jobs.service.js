@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -23,12 +22,23 @@ let JobsService = class JobsService {
     constructor(repo) {
         this.repo = repo;
     }
-    async create(type, payload) {
-        const job = this.repo.create({ type, payload, status: 'queued' });
+    async create(type, payload, userId) {
+        const job = this.repo.create({
+            type,
+            payload,
+            userId: userId ?? null,
+            status: 'queued',
+        });
         return this.repo.save(job);
     }
     async findById(id) {
         const job = await this.repo.findOne({ where: { id } });
+        if (!job)
+            throw new common_1.NotFoundException('Job not found');
+        return job;
+    }
+    async findByIdForUser(id, userId) {
+        const job = await this.repo.findOne({ where: { id, userId } });
         if (!job)
             throw new common_1.NotFoundException('Job not found');
         return job;
@@ -47,6 +57,6 @@ exports.JobsService = JobsService;
 exports.JobsService = JobsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(job_entity_1.JobEntity)),
-    __metadata("design:paramtypes", [typeof (_a = typeof typeorm_2.Repository !== "undefined" && typeorm_2.Repository) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [typeorm_2.Repository])
 ], JobsService);
 //# sourceMappingURL=jobs.service.js.map

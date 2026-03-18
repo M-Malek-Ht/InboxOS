@@ -5,6 +5,8 @@ export declare class DraftsController {
     private readonly drafts;
     private readonly runner;
     constructor(drafts: DraftsService, runner: JobRunnerService);
-    list(emailId: string): any;
-    create(emailId: string, dto: CreateDraftDto): Promise<any>;
+    list(emailId: string): Promise<import("./draft.entity").DraftEntity[]>;
+    create(emailId: string, req: any, dto: CreateDraftDto): Promise<import("./draft.entity").DraftEntity | {
+        jobId: string;
+    }>;
 }

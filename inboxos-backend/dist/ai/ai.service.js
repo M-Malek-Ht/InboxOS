@@ -11,16 +11,20 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
-var _a;
+var AiService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const sdk_1 = __importDefault(require("@anthropic-ai/sdk"));
 let AiService = class AiService {
+    static { AiService_1 = this; }
     configService;
     client;
     models;
+    static MAX_CLASSIFY_BODY_CHARS = 12000;
+    static MAX_DRAFT_BODY_CHARS = 16000;
+    static MAX_INSTRUCTION_CHARS = 1000;
     constructor(configService) {
         this.configService = configService;
         this.client = new sdk_1.default({
@@ -31,6 +35,9 @@ let AiService = class AiService {
         this.models = Array.from(new Set([configuredModel, 'claude-3-5-sonnet-latest']));
     }
     async classifyEmail(email) {
+        const safeFrom = this.truncateForPrompt(email.from, 320);
+        const safeSubject = this.truncateForPrompt(email.subject, 500);
+        const safeBody = this.truncateForPrompt(email.body, AiService_1.MAX_CLASSIFY_BODY_CHARS);
         const message = await this.createUserMessage(`Analyze the following email and return a JSON object with these fields:
 - "category": one of "Meetings", "Work", "Personal", "Bills", "Newsletters", "Support", "Other"
 - "priorityScore": integer 0-100 (100 = most urgent)
@@ -40,12 +47,12 @@ let AiService = class AiService {
 
 Return ONLY the JSON object, no markdown, no explanation.
 
-From: ${email.from}
-Subject: ${email.subject}
+From: ${safeFrom}
+Subject: ${safeSubject}
 Body:
-${email.body}`, 1024);
+${safeBody}`, 1024);
         const text = message.content[0].type === 'text' ? message.content[0].text : '';
-        const result = JSON.parse(text);
+        const result = this.parseJsonObject(text);
         return {
             category: result.category ?? 'Other',
             priorityScore: Math.min(100, Math.max(0, Number(result.priorityScore) || 50)),
@@ -69,20 +76,24 @@ ${email.body}`, 1024);
         };
         const toneInstruction = toneGuide[options.tone] || toneGuide['Professional'];
         const lengthInstruction = lengthGuide[options.length] || lengthGuide['Medium'];
+        const safeFrom = this.truncateForPrompt(email.from, 320);
+        const safeSubject = this.truncateForPrompt(email.subject, 500);
+        const safeBody = this.truncateForPrompt(email.body, AiService_1.MAX_DRAFT_BODY_CHARS);
         let prompt = `Draft a reply to the following email.
 
 ${toneInstruction}
 ${lengthInstruction}`;
         if (options.instruction) {
-            prompt += `\n\nAdditional instructions from the user: ${options.instruction}`;
+            const safeInstruction = this.truncateForPrompt(options.instruction, AiService_1.MAX_INSTRUCTION_CHARS);
+            prompt += `\n\nAdditional instructions from the user: ${safeInstruction}`;
         }
         prompt += `
 
 Original email:
-From: ${email.from}
-Subject: ${email.subject}
+From: ${safeFrom}
+Subject: ${safeSubject}
 Body:
-${email.body}
+${safeBody}
 
 Write ONLY the reply body text. Do not include "Subject:", "To:", greeting headers, or email metadata. Start directly with the greeting (e.g. "Hi [Name],").`;
         const message = await this.createUserMessage(prompt, 2048);
@@ -113,8 +124,11 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
             }
             catch (error) {
                 const status = error?.status ?? error?.error?.status;
-                if (status === 429 && attempt < maxRetries) {
-                    const delay = Math.min(2000 * Math.pow(2, attempt), 30000);
+                const transient = status === 429 || status === 500 || status === 502 || status === 503 || status === 504;
+                if (transient && attempt < maxRetries) {
+                    const base = Math.min(1500 * Math.pow(2, attempt), 30000);
+                    const jitter = Math.floor(Math.random() * 500);
+                    const delay = base + jitter;
                     await new Promise((r) => setTimeout(r, delay));
                     continue;
                 }
@@ -138,10 +152,35 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
             error?.message ??
             String(error));
     }
+    truncateForPrompt(value, maxChars) {
+        const text = typeof value === 'string' ? value : String(value ?? '');
+        if (text.length <= maxChars)
+            return text;
+        return `${text.slice(0, maxChars)}\n[truncated]`;
+    }
+    parseJsonObject(text) {
+        const trimmed = text.trim();
+        try {
+            return JSON.parse(trimmed);
+        }
+        catch {
+        }
+        const start = trimmed.indexOf('{');
+        const end = trimmed.lastIndexOf('}');
+        if (start >= 0 && end > start) {
+            const candidate = trimmed.slice(start, end + 1);
+            try {
+                return JSON.parse(candidate);
+            }
+            catch {
+            }
+        }
+        throw new Error('Invalid JSON returned by AI classify response');
+    }
 };
 exports.AiService = AiService;
-exports.AiService = AiService = __decorate([
+exports.AiService = AiService = AiService_1 = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [typeof (_a = typeof config_1.ConfigService !== "undefined" && config_1.ConfigService) === "function" ? _a : Object])
+    __metadata("design:paramtypes", [config_1.ConfigService])
 ], AiService);
 //# sourceMappingURL=ai.service.js.map
