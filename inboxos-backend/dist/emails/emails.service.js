@@ -60,22 +60,27 @@ let EmailsService = EmailsService_1 = class EmailsService {
             try {
                 const service = provider === 'gmail' ? this.gmail : this.microsoftMail;
                 const emails = await service.listEmails(token, {
-                    maxResults: options.limit,
+                    maxResults: options.filter && options.filter !== 'unread'
+                        ? Math.max(options.limit ?? 40, 100)
+                        : options.limit,
                     filter: options.filter,
                     search: options.search,
                     userEmail: provider === 'gmail' ? userEmail : undefined,
                 });
                 this.log.log(`${provider} returned ${emails.length} emails`);
-                return this.attachInsights(userId, emails);
+                const withInsights = await this.attachInsights(userId, emails);
+                return this.applyEmailFilters(withInsights, options);
             }
             catch (error) {
                 this.log.error(`${provider} API error: ${error}`);
             }
         }
         this.log.log('Falling back to seed data');
-        await this.seedIfEmpty();
+        await this.seedIfEmpty(userId);
         const qb = this.repo.createQueryBuilder('email');
-        qb.where('email.isTrashed = false').andWhere('email.isSent = false');
+        qb.where('email.userId = :userId', { userId })
+            .andWhere('email.isTrashed = false')
+            .andWhere('email.isSent = false');
         if (options.search) {
             qb.andWhere('email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
         }
@@ -83,10 +88,9 @@ let EmailsService = EmailsService_1 = class EmailsService {
             qb.andWhere('email.isRead = false');
         }
         qb.orderBy('email.receivedAt', 'DESC');
-        if (options.limit)
-            qb.take(options.limit);
         const emails = await qb.getMany();
-        return this.attachInsights(userId, emails);
+        const withInsights = await this.attachInsights(userId, emails);
+        return this.applyEmailFilters(withInsights, options);
     }
     async getForUser(userId, emailId) {
         this.log.debug(`getForUser called with emailId=${emailId}`);
@@ -112,7 +116,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 this.log.warn(`Microsoft getMessage failed for emailId=${emailId}`);
             }
         }
-        const email = await this.repo.findOne({ where: { id: emailId } });
+        const email = await this.repo.findOne({ where: { id: emailId, userId } });
         return this.attachInsight(userId, email);
     }
     async setReadState(userId, emailId, isRead) {
@@ -137,8 +141,8 @@ let EmailsService = EmailsService_1 = class EmailsService {
             }
             return { ok: true };
         }
-        await this.repo.update({ id: emailId }, { isRead });
-        return this.repo.findOne({ where: { id: emailId } });
+        await this.repo.update({ id: emailId, userId }, { isRead });
+        return this.repo.findOne({ where: { id: emailId, userId } });
     }
     async getThread(userId, emailId) {
         const accessToken = await this.gmail.getAccessTokenForUser(userId);
@@ -165,10 +169,10 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 this.log.warn(`Microsoft getThread failed for emailId=${emailId}`);
             }
         }
-        const email = await this.repo.findOne({ where: { id: emailId } });
+        const email = await this.repo.findOne({ where: { id: emailId, userId } });
         return email ? [email] : [];
     }
-    async sendReply(userId, emailId, body) {
+    async sendReply(userId, emailId, body, draftId) {
         const accessToken = await this.gmail.getAccessTokenForUser(userId);
         if (accessToken) {
             const email = await this.gmail.getMessage(accessToken, emailId);
@@ -179,14 +183,20 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 threadId: email.threadId,
                 inReplyTo: email.messageIdHeader,
             });
+            if (draftId) {
+                await this.draftsRepo.update({ id: draftId, userId }, { status: 'sent' });
+            }
             return { ok: true, provider: 'gmail' };
         }
         const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
         if (msToken) {
             await this.microsoftMail.sendReply(msToken, emailId, body);
+            if (draftId) {
+                await this.draftsRepo.update({ id: draftId, userId }, { status: 'sent' });
+            }
             return { ok: true, provider: 'microsoft' };
         }
-        const original = await this.repo.findOne({ where: { id: emailId } });
+        const original = await this.repo.findOne({ where: { id: emailId, userId } });
         const user = await this.usersRepo.findOne({ where: { id: userId } });
         if (!original || !user) {
             throw new Error('No email provider linked and local email context missing');
@@ -195,6 +205,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
             ? original.subject
             : `Re: ${original.subject}`;
         await this.repo.save(this.repo.create({
+            userId,
             from: user.email,
             to: original.from,
             subject,
@@ -204,6 +215,9 @@ let EmailsService = EmailsService_1 = class EmailsService {
             isSent: true,
             isTrashed: false,
         }));
+        if (draftId) {
+            await this.draftsRepo.update({ id: draftId, userId }, { status: 'sent' });
+        }
         return { ok: true, provider: 'local' };
     }
     async listSentForUser(userId, options = {}) {
@@ -232,7 +246,9 @@ let EmailsService = EmailsService_1 = class EmailsService {
             }
         }
         const qb = this.repo.createQueryBuilder('email');
-        qb.where('email.isSent = true').andWhere('email.isTrashed = false');
+        qb.where('email.userId = :userId', { userId })
+            .andWhere('email.isSent = true')
+            .andWhere('email.isTrashed = false');
         if (options.search) {
             qb.andWhere('email.subject ILIKE :q OR email.to ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
         }
@@ -243,7 +259,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
     }
     async listTrashForUser(userId, options = {}) {
         const qb = this.repo.createQueryBuilder('email');
-        qb.where('email.isTrashed = true');
+        qb.where('email.userId = :userId', { userId }).andWhere('email.isTrashed = true');
         if (options.search) {
             qb.andWhere('email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
         }
@@ -253,7 +269,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return qb.getMany();
     }
     async untrashEmail(userId, emailId) {
-        const local = await this.repo.findOne({ where: { id: emailId } });
+        const local = await this.repo.findOne({ where: { id: emailId, userId } });
         const externalId = local?.externalId ?? null;
         if (externalId) {
             const accessToken = await this.gmail.getAccessTokenForUser(userId);
@@ -267,11 +283,11 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 }
             }
         }
-        await this.repo.update({ id: emailId }, { isTrashed: false });
+        await this.repo.update({ id: emailId, userId }, { isTrashed: false });
         return { ok: true, provider: externalId ? 'provider' : 'local' };
     }
     async permanentDeleteEmail(userId, emailId) {
-        const local = await this.repo.findOne({ where: { id: emailId } });
+        const local = await this.repo.findOne({ where: { id: emailId, userId } });
         const externalId = local?.externalId ?? null;
         if (externalId) {
             const accessToken = await this.gmail.getAccessTokenForUser(userId);
@@ -285,9 +301,9 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 }
             }
         }
-        await this.repo.delete({ id: emailId });
+        await this.repo.delete({ id: emailId, userId });
         await this.insightsRepo.delete({ userId, emailId });
-        await this.draftsRepo.delete({ emailId });
+        await this.draftsRepo.delete({ emailId, userId });
         return { ok: true };
     }
     async deleteEmail(userId, emailId) {
@@ -295,7 +311,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
         if (accessToken) {
             try {
                 const email = await this.gmail.getMessage(accessToken, emailId);
-                await this.saveLocalCopy(email, emailId, true, false);
+                await this.saveLocalCopy(userId, email, emailId, true, false);
             }
             catch (err) {
                 this.log.warn(`Could not cache Gmail email ${emailId} before trashing: ${err}`);
@@ -307,7 +323,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
             if (msToken) {
                 try {
                     const email = await this.microsoftMail.getMessage(msToken, emailId);
-                    await this.saveLocalCopy(email, emailId, true, false);
+                    await this.saveLocalCopy(userId, email, emailId, true, false);
                 }
                 catch (err) {
                     this.log.warn(`Could not cache Microsoft email ${emailId} before trashing: ${err}`);
@@ -315,20 +331,21 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 await this.microsoftMail.deleteMessage(msToken, emailId);
             }
             else {
-                await this.repo.update({ id: emailId }, { isTrashed: true });
+                await this.repo.update({ id: emailId, userId }, { isTrashed: true });
             }
         }
         await this.insightsRepo.delete({ userId, emailId });
-        await this.draftsRepo.delete({ emailId });
+        await this.draftsRepo.delete({ emailId, userId });
         return { ok: true };
     }
-    async saveLocalCopy(email, externalId, isTrashed, isSent) {
-        const existing = await this.repo.findOne({ where: { externalId } });
+    async saveLocalCopy(userId, email, externalId, isTrashed, isSent) {
+        const existing = await this.repo.findOne({ where: { userId, externalId } });
         if (existing) {
             await this.repo.update({ id: existing.id }, { isTrashed, isSent });
             return;
         }
         await this.repo.save(this.repo.create({
+            userId,
             from: email.from,
             to: email.to ?? '',
             subject: email.subject,
@@ -340,6 +357,28 @@ let EmailsService = EmailsService_1 = class EmailsService {
             receivedAt: email.receivedAt,
             externalId,
         }));
+    }
+    applyEmailFilters(emails, options = {}) {
+        let filtered = emails;
+        switch (options.filter) {
+            case 'needsReply':
+                filtered = filtered.filter((email) => !!this.getEmailMeta(email).needsReply);
+                break;
+            case 'highPriority':
+                filtered = filtered.filter((email) => (this.getEmailMeta(email).priorityScore ?? 0) >= 80);
+                break;
+            case 'unread':
+                break;
+            default:
+                if (options.filter) {
+                    filtered = filtered.filter((email) => this.getEmailMeta(email).category === options.filter);
+                }
+                break;
+        }
+        return typeof options.limit === 'number' ? filtered.slice(0, options.limit) : filtered;
+    }
+    getEmailMeta(email) {
+        return email;
     }
     async attachInsights(userId, emails) {
         if (!emails.length)
@@ -390,12 +429,13 @@ let EmailsService = EmailsService_1 = class EmailsService {
         const classified = new Set(existing.map((i) => i.emailId));
         return emailIds.filter((id) => !classified.has(id));
     }
-    async seedIfEmpty() {
-        const count = await this.repo.count();
+    async seedIfEmpty(userId) {
+        const count = await this.repo.count({ where: { userId } });
         if (count > 0)
             return;
         await this.repo.save([
             {
+                userId,
                 from: 'demo@company.com',
                 subject: 'Welcome to InboxOS',
                 snippet: 'This is a seeded email from your backend.',
@@ -403,6 +443,7 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 isRead: false,
             },
             {
+                userId,
                 from: 'hr@company.com',
                 subject: 'Interview Scheduling',
                 snippet: 'Can you do Tuesday 2pm?',

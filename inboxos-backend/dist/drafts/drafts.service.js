@@ -25,30 +25,33 @@ let DraftsService = class DraftsService {
         this.draftsRepo = draftsRepo;
         this.emailsRepo = emailsRepo;
     }
-    async findEmailOrNull(emailId) {
-        return this.emailsRepo.findOne({ where: { id: emailId } });
+    async findEmailOrNull(userId, emailId) {
+        return this.emailsRepo.findOne({ where: { id: emailId, userId } });
     }
-    listByEmail(emailId) {
+    listByEmail(userId, emailId) {
         return this.draftsRepo.find({
-            where: { emailId },
+            where: { userId, emailId, status: 'draft' },
             order: { createdAt: 'DESC' },
         });
     }
-    async listLatestDrafts() {
+    async listLatestDrafts(userId) {
         return this.draftsRepo
             .createQueryBuilder('d')
+            .where('d.userId = :userId', { userId })
+            .andWhere('d.status = :status', { status: 'draft' })
             .distinctOn(['d.emailId'])
             .orderBy('d.emailId')
             .addOrderBy('d.version', 'DESC')
             .getMany();
     }
-    async createDirectDraft(emailId, dto) {
+    async createDirectDraft(userId, emailId, dto) {
         const latestDraft = await this.draftsRepo.findOne({
-            where: { emailId },
+            where: { userId, emailId },
             order: { version: 'DESC' },
         });
         const nextVersion = (latestDraft?.version ?? 0) + 1;
         const draft = this.draftsRepo.create({
+            userId,
             emailId,
             content: dto.content,
             version: nextVersion,
@@ -58,6 +61,9 @@ let DraftsService = class DraftsService {
             status: dto.status ?? 'draft',
         });
         return this.draftsRepo.save(draft);
+    }
+    async markAsSent(userId, draftId) {
+        await this.draftsRepo.update({ id: draftId, userId }, { status: 'sent' });
     }
 };
 exports.DraftsService = DraftsService;

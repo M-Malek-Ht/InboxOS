@@ -140,7 +140,7 @@ export class EmailsController {
     @Body() body: { body: string; draftId?: string },
     @Request() req: any,
   ) {
-    const result = await this.emails.sendReply(req.user.id, id, body.body);
+    const result = await this.emails.sendReply(req.user.id, id, body.body, body.draftId);
     return result;
   }
 

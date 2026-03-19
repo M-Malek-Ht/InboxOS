@@ -152,7 +152,7 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
         let skipped = 0;
         for (const item of items) {
             const existingDraft = await this.draftsRepo.findOne({
-                where: { emailId: item.emailId },
+                where: { userId, emailId: item.emailId, status: 'draft' },
             });
             if (existingDraft) {
                 skipped++;
@@ -161,6 +161,7 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
             try {
                 const content = await this.ai.generateDraft({ from: item.from, subject: item.subject, body: item.body }, { tone, length });
                 const draft = this.draftsRepo.create({
+                    userId,
                     emailId: item.emailId,
                     content,
                     version: 1,
@@ -182,14 +183,15 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
         return { drafted, skipped, total: items.length };
     }
     async handleDraft(payload) {
-        const { emailId, from, subject, body, tone, length, instruction } = payload;
+        const { userId, emailId, from, subject, body, tone, length, instruction } = payload;
         const content = await this.ai.generateDraft({ from, subject, body }, { tone: tone ?? 'Professional', length: length ?? 'Medium', instruction });
         const latestDraft = await this.draftsRepo.findOne({
-            where: { emailId },
+            where: { userId, emailId },
             order: { version: 'DESC' },
         });
         const nextVersion = (latestDraft?.version ?? 0) + 1;
         const draft = this.draftsRepo.create({
+            userId,
             emailId,
             content,
             version: nextVersion,

@@ -199,7 +199,7 @@ export class JobRunnerService {
     for (const item of items) {
       // Skip if a draft already exists for this email
       const existingDraft = await this.draftsRepo.findOne({
-        where: { emailId: item.emailId },
+        where: { userId, emailId: item.emailId, status: 'draft' },
       });
       if (existingDraft) {
         skipped++;
@@ -213,6 +213,7 @@ export class JobRunnerService {
         );
 
         const draft = this.draftsRepo.create({
+          userId,
           emailId: item.emailId,
           content,
           version: 1,
@@ -237,7 +238,7 @@ export class JobRunnerService {
   }
 
   private async handleDraft(payload: Record<string, any>) {
-    const { emailId, from, subject, body, tone, length, instruction } = payload;
+    const { userId, emailId, from, subject, body, tone, length, instruction } = payload;
 
     const content = await this.ai.generateDraft(
       { from, subject, body },
@@ -246,13 +247,14 @@ export class JobRunnerService {
 
     // Auto-increment version for this email
     const latestDraft = await this.draftsRepo.findOne({
-      where: { emailId },
+      where: { userId, emailId },
       order: { version: 'DESC' },
     });
     const nextVersion = (latestDraft?.version ?? 0) + 1;
 
     // Persist the draft
     const draft = this.draftsRepo.create({
+      userId,
       emailId,
       content,
       version: nextVersion,

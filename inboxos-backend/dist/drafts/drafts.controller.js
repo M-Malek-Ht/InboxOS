@@ -25,18 +25,18 @@ let DraftsController = class DraftsController {
         this.drafts = drafts;
         this.runner = runner;
     }
-    list(emailId) {
-        return this.drafts.listByEmail(emailId);
+    list(emailId, req) {
+        return this.drafts.listByEmail(req.user.id, emailId);
     }
     async create(emailId, req, dto) {
         if (dto.content) {
-            return this.drafts.createDirectDraft(emailId, dto);
+            return this.drafts.createDirectDraft(req.user.id, emailId, dto);
         }
         let from = dto.emailFrom;
         let subject = dto.emailSubject;
         let body = dto.emailBody;
         if (!from || !subject) {
-            const email = await this.drafts.findEmailOrNull(emailId);
+            const email = await this.drafts.findEmailOrNull(req.user.id, emailId);
             if (email) {
                 from = from ?? email.from;
                 subject = subject ?? email.subject;
@@ -64,8 +64,9 @@ __decorate([
     (0, common_1.Get)(),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     __param(0, (0, common_1.Param)('emailId')),
+    __param(1, (0, common_1.Request)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", void 0)
 ], DraftsController.prototype, "list", null);
 __decorate([

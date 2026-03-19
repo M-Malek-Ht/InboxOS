@@ -90,7 +90,7 @@ let EmailsController = class EmailsController {
         return this.emails.untrashEmail(req.user.id, id);
     }
     async reply(id, body, req) {
-        const result = await this.emails.sendReply(req.user.id, id, body.body);
+        const result = await this.emails.sendReply(req.user.id, id, body.body, body.draftId);
         return result;
     }
     async classify(id, req) {

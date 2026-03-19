@@ -13,6 +13,7 @@ exports.EmailEntity = void 0;
 const typeorm_1 = require("typeorm");
 let EmailEntity = class EmailEntity {
     id;
+    userId;
     from;
     to;
     subject;
@@ -29,6 +30,11 @@ __decorate([
     (0, typeorm_1.PrimaryGeneratedColumn)('uuid'),
     __metadata("design:type", String)
 ], EmailEntity.prototype, "id", void 0);
+__decorate([
+    (0, typeorm_1.Index)(),
+    (0, typeorm_1.Column)({ type: 'uuid' }),
+    __metadata("design:type", String)
+], EmailEntity.prototype, "userId", void 0);
 __decorate([
     (0, typeorm_1.Column)(),
     __metadata("design:type", String)

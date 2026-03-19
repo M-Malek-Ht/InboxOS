@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, Request, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { DraftsService } from './drafts.service';
 
@@ -8,7 +8,7 @@ export class AllDraftsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async listAll() {
-    return this.drafts.listLatestDrafts();
+  async listAll(@Request() req: any) {
+    return this.drafts.listLatestDrafts(req.user.id);
   }
 }

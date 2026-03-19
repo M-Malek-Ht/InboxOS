@@ -26,7 +26,7 @@ export declare class EmailsService {
         ok: boolean;
     } | null>;
     getThread(userId: string, emailId: string): Promise<ParsedEmail[] | EmailEntity[]>;
-    sendReply(userId: string, emailId: string, body: string): Promise<{
+    sendReply(userId: string, emailId: string, body: string, draftId?: string): Promise<{
         ok: boolean;
         provider: "gmail";
     } | {
@@ -55,6 +55,8 @@ export declare class EmailsService {
         ok: boolean;
     }>;
     private saveLocalCopy;
+    private applyEmailFilters;
+    private getEmailMeta;
     private attachInsights;
     private attachInsight;
     getUnclassifiedIds(userId: string, emailIds: string[]): Promise<string[]>;

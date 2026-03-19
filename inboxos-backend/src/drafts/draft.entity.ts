@@ -6,6 +6,10 @@ export class DraftEntity {
   id: string;
 
   @Index()
+  @Column({ type: 'uuid' })
+  userId: string;
+
+  @Index()
   @Column({ type: 'text' })
   emailId: string;
 

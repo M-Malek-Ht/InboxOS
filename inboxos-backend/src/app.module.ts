@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 import { HealthController } from './health.controller';
 import { EmailsModule } from './emails/emails.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -39,6 +40,8 @@ import { SettingsModule } from './settings/settings.module';
           database: cfg.get<string>('DB_NAME'),
           autoLoadEntities: true,
           synchronize,
+          migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
+          migrationsRun: true,
           ssl: useSsl ? { rejectUnauthorized: false } : false,
         };
       },

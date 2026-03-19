@@ -13,8 +13,8 @@ export class DraftsController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  list(@Param('emailId') emailId: string) {
-    return this.drafts.listByEmail(emailId);
+  list(@Param('emailId') emailId: string, @Request() req: any) {
+    return this.drafts.listByEmail(req.user.id, emailId);
   }
 
   @Post()
@@ -26,7 +26,7 @@ export class DraftsController {
   ) {
     // If content is provided, save directly (manual edit / paste)
     if (dto.content) {
-      return this.drafts.createDirectDraft(emailId, dto);
+      return this.drafts.createDirectDraft(req.user.id, emailId, dto);
     }
 
     // Resolve email context: prefer DTO fields (for external Gmail/Microsoft emails),
@@ -36,7 +36,7 @@ export class DraftsController {
     let body = dto.emailBody;
 
     if (!from || !subject) {
-      const email = await this.drafts.findEmailOrNull(emailId);
+      const email = await this.drafts.findEmailOrNull(req.user.id, emailId);
       if (email) {
         from = from ?? email.from;
         subject = subject ?? email.subject;

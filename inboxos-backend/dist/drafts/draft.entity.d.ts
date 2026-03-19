@@ -1,5 +1,6 @@
 export declare class DraftEntity {
     id: string;
+    userId: string;
     emailId: string;
     content: string;
     version: number;

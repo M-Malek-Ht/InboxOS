@@ -1,5 +1,6 @@
 export declare class EmailEntity {
     id: string;
+    userId: string;
     from: string;
     to: string;
     subject: string;
