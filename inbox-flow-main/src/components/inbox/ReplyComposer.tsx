@@ -91,8 +91,10 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
         },
       });
       setJobId(result.jobId);
-    } catch {
-      toast.error('Failed to start AI generation');
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Failed to start AI generation';
+      toast.error(message);
     }
   };
 

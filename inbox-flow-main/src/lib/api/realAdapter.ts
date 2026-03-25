@@ -65,6 +65,8 @@ interface SettingsApiResponse {
   defaultLength: string;
 }
 
+const encodePathSegment = (value: string) => encodeURIComponent(value);
+
 type FrontendTaskStatus = 'Backlog' | 'In Progress' | 'Done';
 type FrontendTaskPriority = 'Low' | 'Med' | 'High';
 
@@ -127,6 +129,9 @@ function serializeTaskPriority(priority?: string) {
 function stripHtml(html: string): string {
   if (!html) return '';
   return html
+    // Remove style/script blocks entirely so CSS/JS text does not leak into bodyText.
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>/gi, '\n')
     .replace(/<\/div>/gi, '\n')
@@ -213,20 +218,22 @@ export const api = {
   },
 
   getEmail: async (id: string) => {
-    const e = await http.get<EmailApiResponse>(`/emails/${id}`);
+    const e = await http.get<EmailApiResponse>(`/emails/${encodePathSegment(id)}`);
     return mapEmail(e);
   },
 
   // Thread
   getThread: async (emailId: string) => {
-    const list = await http.get<EmailApiResponse[]>(`/emails/${emailId}/thread`);
+    const list = await http.get<EmailApiResponse[]>(
+      `/emails/${encodePathSegment(emailId)}/thread`,
+    );
     return list.map(mapEmail);
   },
 
   // Drafts (match hooks names)
-  getDrafts: (emailId: string) => http.get<Draft[]>(`/emails/${emailId}/drafts`),
+  getDrafts: (emailId: string) => http.get<Draft[]>(`/emails/${encodePathSegment(emailId)}/drafts`),
   generateDraft: (emailId: string, request: CreateDraftRequest) =>
-    http.post<{ jobId: string }>(`/emails/${emailId}/drafts`, request),
+    http.post<{ jobId: string }>(`/emails/${encodePathSegment(emailId)}/drafts`, request),
 
   // Tasks (match hooks names)
   getTasks: async (params: TasksQueryParams) => {
@@ -248,14 +255,14 @@ export const api = {
     return mapTask(created);
   },
   updateTask: async (id: string, request: UpdateTaskRequest) => {
-    const updated = await http.patch<TaskApiResponse>(`/tasks/${id}`, {
+    const updated = await http.patch<TaskApiResponse>(`/tasks/${encodePathSegment(id)}`, {
       ...request,
       status: serializeTaskStatus(request?.status),
       priority: serializeTaskPriority(request?.priority),
     });
     return mapTask(updated);
   },
-  deleteTask: (id: string) => http.delete<{ ok: boolean }>(`/tasks/${id}`),
+  deleteTask: (id: string) => http.delete<{ ok: boolean }>(`/tasks/${encodePathSegment(id)}`),
 
   // Events (match hooks names)
   getEvents: async (params: EventsQueryParams) => {
@@ -278,31 +285,34 @@ export const api = {
   },
   createEvent: async (request: CreateEventRequest) => mapEvent(await http.post<EventApiResponse>('/events', request)),
   updateEvent: async (id: string, request: Partial<CreateEventRequest>) =>
-    mapEvent(await http.patch<EventApiResponse>(`/events/${id}`, request)),
-  deleteEvent: (id: string) => http.delete<{ ok: boolean }>(`/events/${id}`),
+    mapEvent(await http.patch<EventApiResponse>(`/events/${encodePathSegment(id)}`, request)),
+  deleteEvent: (id: string) => http.delete<{ ok: boolean }>(`/events/${encodePathSegment(id)}`),
 
   // Email actions
   markEmailRead: async (id: string, isRead: boolean) =>
-    http.patch<EmailApiResponse | { ok: boolean }>(`/emails/${id}`, { isRead }),
+    http.patch<EmailApiResponse | { ok: boolean }>(`/emails/${encodePathSegment(id)}`, { isRead }),
 
   // Reply
   sendReply: async (emailId: string, body: string, draftId?: string) =>
-    http.post<{ ok: boolean; provider: string }>(`/emails/${emailId}/reply`, { body, draftId }),
+    http.post<{ ok: boolean; provider: string }>(
+      `/emails/${encodePathSegment(emailId)}/reply`,
+      { body, draftId },
+    ),
 
   // Delete (moves to trash)
   deleteEmail: async (emailId: string) =>
-    http.delete<{ ok: boolean }>(`/emails/${emailId}`),
+    http.delete<{ ok: boolean }>(`/emails/${encodePathSegment(emailId)}`),
 
   // AI-powered endpoints (async job queue)
   classifyEmail: async (emailId: string) =>
-    http.post<{ jobId: string }>(`/emails/${emailId}/classify`, {}),
+    http.post<{ jobId: string }>(`/emails/${encodePathSegment(emailId)}/classify`, {}),
 
   classifyBatch: async (emailIds: string[]) =>
     http.post<{ jobId: string | null; count: number }>('/emails/classify-batch', { emailIds }),
 
   // Job polling
   getJob: async (jobId: string) =>
-    http.get<JobApiResponse>(`/jobs/${jobId}`),
+    http.get<JobApiResponse>(`/jobs/${encodePathSegment(jobId)}`),
 
   // Settings
   getSettings: async () =>
@@ -333,15 +343,15 @@ export const api = {
 
   // Untrash (restore from trash)
   untrashEmail: async (emailId: string) =>
-    http.post<{ ok: boolean }>(`/emails/${emailId}/untrash`, {}),
+    http.post<{ ok: boolean }>(`/emails/${encodePathSegment(emailId)}/untrash`, {}),
 
   // Permanently delete (removes from trash forever)
   permanentlyDeleteEmail: async (emailId: string) =>
-    http.delete<{ ok: boolean }>(`/emails/${emailId}/permanent`),
+    http.delete<{ ok: boolean }>(`/emails/${encodePathSegment(emailId)}/permanent`),
 
   // Date extraction
   extractDates: async (emailId: string) =>
-    http.post<{ jobId: string }>(`/emails/${emailId}/extract-dates`, {}),
+    http.post<{ jobId: string }>(`/emails/${encodePathSegment(emailId)}/extract-dates`, {}),
   resetDemoData: async () => {
     throw new Error('Demo data reset is only available in the mock adapter.');
   },
