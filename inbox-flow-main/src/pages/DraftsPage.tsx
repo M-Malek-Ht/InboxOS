@@ -48,7 +48,7 @@ export default function DraftsPage() {
       toast.success('Draft regenerated!');
     } else if (job.status === 'failed') {
       setJobId(null);
-      toast.error('Draft generation failed');
+      toast.error(job.error ? `Draft generation failed: ${job.error}` : 'Draft generation failed');
     }
   }, [job, jobId, refetchDrafts, refetchEmailDrafts]);
 
@@ -96,8 +96,9 @@ export default function DraftsPage() {
         },
       });
       setJobId(result.jobId);
-    } catch {
-      toast.error('Failed to start generation');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to start generation';
+      toast.error(message);
     }
   };
 

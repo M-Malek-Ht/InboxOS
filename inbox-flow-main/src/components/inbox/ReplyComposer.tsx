@@ -73,10 +73,10 @@ export function ReplyComposer({ email, onSent, onClose }: ReplyComposerProps) {
       setJobId(null);
       toast.success('AI draft ready. Edit and send when you are ready.');
     } else if (job?.status === 'failed') {
-      toast.error('Draft generation failed');
+      toast.error(job.error ? `Draft generation failed: ${job.error}` : 'Draft generation failed');
       setJobId(null);
     }
-  }, [job?.status, refetchDrafts]);
+  }, [job?.status, job?.error, refetchDrafts]);
 
   const handleGenerate = async () => {
     try {
