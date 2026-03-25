@@ -160,4 +160,21 @@ export class EmailsController {
 
     return { jobId };
   }
+
+  @Post(':id/extract-dates')
+  @UseGuards(JwtAuthGuard)
+  async extractDates(@Param('id') id: string, @Request() req: any) {
+    const email = await this.emails.getForUser(req.user.id, id);
+    if (!email) throw new NotFoundException('Email not found');
+
+    const jobId = await this.runner.enqueue('extractDates', {
+      userId: req.user.id,
+      emailId: id,
+      from: email.from,
+      subject: email.subject,
+      body: email.body ?? '',
+    });
+
+    return { jobId };
+  }
 }

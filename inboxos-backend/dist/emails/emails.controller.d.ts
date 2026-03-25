@@ -49,4 +49,7 @@ export declare class EmailsController {
     classify(id: string, req: any): Promise<{
         jobId: string;
     }>;
+    extractDates(id: string, req: any): Promise<{
+        jobId: string;
+    }>;
 }

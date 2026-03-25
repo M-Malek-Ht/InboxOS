@@ -339,10 +339,9 @@ export const api = {
   permanentlyDeleteEmail: async (emailId: string) =>
     http.delete<{ ok: boolean }>(`/emails/${emailId}/permanent`),
 
-  // Not yet implemented
-  extractDates: async (_emailId: string) => {
-    throw new Error('Date extraction is not available in the current backend yet.');
-  },
+  // Date extraction
+  extractDates: async (emailId: string) =>
+    http.post<{ jobId: string }>(`/emails/${emailId}/extract-dates`, {}),
   resetDemoData: async () => {
     throw new Error('Demo data reset is only available in the mock adapter.');
   },

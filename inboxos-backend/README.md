@@ -25,6 +25,14 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## InboxOS local setup
+
+1. Create `.env` from `env.example`.
+2. Set your Postgres credentials (`DB_*` values).
+3. Keep `FRONTEND_URL=http://localhost:8080` to allow cookies/CORS with the frontend.
+4. Start backend: `npm run start:dev`.
+5. In `inbox-flow-main/.env`, set `VITE_API_URL=http://localhost:3000`.
+
 ## Project setup
 
 ```bash

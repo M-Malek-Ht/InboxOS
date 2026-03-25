@@ -11,6 +11,13 @@ export interface GenerateDraftOptions {
     length: string;
     instruction?: string;
 }
+export interface ExtractedEvent {
+    title: string;
+    startAt: string;
+    endAt: string;
+    location?: string;
+    notes?: string;
+}
 export declare class AiService {
     private configService;
     private client;
@@ -29,6 +36,11 @@ export declare class AiService {
         subject: string;
         body: string;
     }, options: GenerateDraftOptions): Promise<string>;
+    extractDates(email: {
+        from: string;
+        subject: string;
+        body: string;
+    }): Promise<ExtractedEvent[]>;
     private createUserMessage;
     private callWithRetry;
     private isModelAccessError;

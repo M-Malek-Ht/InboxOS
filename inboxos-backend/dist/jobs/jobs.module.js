@@ -17,12 +17,13 @@ const ai_module_1 = require("../ai/ai.module");
 const draft_entity_1 = require("../drafts/draft.entity");
 const email_insight_entity_1 = require("../emails/email-insight.entity");
 const settings_module_1 = require("../settings/settings.module");
+const event_entity_1 = require("../events/event.entity");
 let JobsModule = class JobsModule {
 };
 exports.JobsModule = JobsModule;
 exports.JobsModule = JobsModule = __decorate([
     (0, common_1.Module)({
-        imports: [typeorm_1.TypeOrmModule.forFeature([job_entity_1.JobEntity, draft_entity_1.DraftEntity, email_insight_entity_1.EmailInsightEntity]), ai_module_1.AiModule, settings_module_1.SettingsModule],
+        imports: [typeorm_1.TypeOrmModule.forFeature([job_entity_1.JobEntity, draft_entity_1.DraftEntity, email_insight_entity_1.EmailInsightEntity, event_entity_1.EventEntity]), ai_module_1.AiModule, settings_module_1.SettingsModule],
         controllers: [jobs_controller_1.JobsController],
         providers: [jobs_service_1.JobsService, job_runner_service_1.JobRunnerService],
         exports: [jobs_service_1.JobsService, job_runner_service_1.JobRunnerService],

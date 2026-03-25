@@ -23,13 +23,15 @@ Inbox Flow is a workflow focused inbox UI that brings email, tasks, and calendar
 The app will be available at `http://localhost:5173` by default.
 
 **Environment variables**
-Create a `.env` file (optional) to point to your backend API:
+Create a `.env` file (recommended) to point to your backend API:
 
 ```env
 VITE_API_URL=http://localhost:3000
 ```
 
-If not set, the frontend defaults to `http://localhost:3000`.
+If not set, the frontend defaults to:
+- `http://localhost:3000` in development
+- `/api` in production (matches the root `vercel.json` rewrite to the Nest lambda)
 
 **Scripts**
 - `npm run dev` Start the dev server

@@ -22,19 +22,22 @@ const ai_service_1 = require("../ai/ai.service");
 const draft_entity_1 = require("../drafts/draft.entity");
 const email_insight_entity_1 = require("../emails/email-insight.entity");
 const settings_service_1 = require("../settings/settings.service");
+const event_entity_1 = require("../events/event.entity");
 let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
     jobs;
     ai;
     settingsService;
     draftsRepo;
     insightsRepo;
+    eventsRepo;
     log = new common_1.Logger(JobRunnerService_1.name);
-    constructor(jobs, ai, settingsService, draftsRepo, insightsRepo) {
+    constructor(jobs, ai, settingsService, draftsRepo, insightsRepo, eventsRepo) {
         this.jobs = jobs;
         this.ai = ai;
         this.settingsService = settingsService;
         this.draftsRepo = draftsRepo;
         this.insightsRepo = insightsRepo;
+        this.eventsRepo = eventsRepo;
     }
     async enqueue(type, payload) {
         const userId = this.getUserIdFromPayload(payload);
@@ -62,6 +65,9 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
                     break;
                 case 'auto-draft-batch':
                     result = await this.handleAutoDraftBatch(jobId, payload);
+                    break;
+                case 'extractDates':
+                    result = await this.handleExtractDates(payload);
                     break;
                 default:
                     throw new Error(`Unknown job type: ${type}`);
@@ -209,6 +215,34 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
             length: saved.length,
         };
     }
+    async handleExtractDates(payload) {
+        const { userId, emailId, from, subject, body } = payload;
+        const extracted = await this.ai.extractDates({ from, subject, body });
+        if (!extracted.length) {
+            return { created: 0, events: [] };
+        }
+        const toCreate = extracted.map((event) => this.eventsRepo.create({
+            userId,
+            title: event.title,
+            startAt: new Date(event.startAt),
+            endAt: new Date(event.endAt),
+            location: event.location ?? '',
+            notes: event.notes ?? '',
+        }));
+        const saved = await this.eventsRepo.save(toCreate);
+        return {
+            created: saved.length,
+            events: saved.map((event) => ({
+                id: event.id,
+                emailId,
+                title: event.title,
+                startAt: event.startAt,
+                endAt: event.endAt,
+                location: event.location,
+                notes: event.notes,
+            })),
+        };
+    }
     getUserIdFromPayload(payload) {
         const userId = payload?.userId;
         return typeof userId === 'string' && userId.length > 0 ? userId : null;
@@ -235,9 +269,11 @@ exports.JobRunnerService = JobRunnerService = JobRunnerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(3, (0, typeorm_1.InjectRepository)(draft_entity_1.DraftEntity)),
     __param(4, (0, typeorm_1.InjectRepository)(email_insight_entity_1.EmailInsightEntity)),
+    __param(5, (0, typeorm_1.InjectRepository)(event_entity_1.EventEntity)),
     __metadata("design:paramtypes", [jobs_service_1.JobsService,
         ai_service_1.AiService,
         settings_service_1.SettingsService,
+        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], JobRunnerService);
