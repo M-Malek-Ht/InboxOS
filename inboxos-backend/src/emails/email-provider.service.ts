@@ -22,7 +22,14 @@ export abstract class EmailProviderService {
       where: { userId, provider: this.providerName },
     });
     if (!account?.refreshToken) return null;
-    return this.refreshAccessToken(account.refreshToken);
+    try {
+      return await this.refreshAccessToken(account.refreshToken);
+    } catch (err: any) {
+      this.log.warn(
+        `${this.providerName} token refresh failed for userId=${userId}: ${err?.message ?? err}`,
+      );
+      return null;
+    }
   }
 
   protected abstract refreshAccessToken(refreshToken: string): Promise<string>;

@@ -258,6 +258,38 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return qb.getMany();
     }
     async listTrashForUser(userId, options = {}) {
+        const gmailToken = await this.gmail.getAccessTokenForUser(userId);
+        if (gmailToken) {
+            try {
+                const providerTrash = await this.gmail.listTrashEmails(gmailToken, {
+                    maxResults: options.limit ?? 40,
+                    search: options.search,
+                });
+                for (const email of providerTrash) {
+                    await this.saveLocalCopy(userId, email, email.id, true, false);
+                }
+            }
+            catch (err) {
+                this.log.warn(`Could not sync Gmail trash: ${err}`);
+            }
+        }
+        else {
+            const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
+            if (msToken) {
+                try {
+                    const providerTrash = await this.microsoftMail.listTrashEmails(msToken, {
+                        maxResults: options.limit ?? 40,
+                        search: options.search,
+                    });
+                    for (const email of providerTrash) {
+                        await this.saveLocalCopy(userId, email, email.id, true, false);
+                    }
+                }
+                catch (err) {
+                    this.log.warn(`Could not sync Microsoft trash: ${err}`);
+                }
+            }
+        }
         const qb = this.repo.createQueryBuilder('email');
         qb.where('email.userId = :userId', { userId }).andWhere('email.isTrashed = true');
         if (options.search) {

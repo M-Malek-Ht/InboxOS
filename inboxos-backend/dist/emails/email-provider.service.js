@@ -32,7 +32,13 @@ let EmailProviderService = class EmailProviderService {
         });
         if (!account?.refreshToken)
             return null;
-        return this.refreshAccessToken(account.refreshToken);
+        try {
+            return await this.refreshAccessToken(account.refreshToken);
+        }
+        catch (err) {
+            this.log.warn(`${this.providerName} token refresh failed for userId=${userId}: ${err?.message ?? err}`);
+            return null;
+        }
     }
 };
 exports.EmailProviderService = EmailProviderService;
