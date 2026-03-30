@@ -55,6 +55,7 @@ export declare class EmailsService {
         ok: boolean;
     }>;
     private saveLocalCopy;
+    private saveLocalCopyIfNotRestored;
     private applyEmailFilters;
     private getEmailMeta;
     private attachInsights;

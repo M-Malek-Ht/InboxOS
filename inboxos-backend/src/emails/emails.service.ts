@@ -303,7 +303,11 @@ export class EmailsService {
           search: options.search,
         });
         for (const email of providerTrash) {
-          await this.saveLocalCopy(userId, email, email.id, true, false);
+          try {
+            await this.saveLocalCopyIfNotRestored(userId, email, email.id, true, email.isSent ?? false);
+          } catch (err) {
+            this.log.warn(`Could not cache Gmail trash email ${email.id}: ${err}`);
+          }
         }
       } catch (err) {
         this.log.warn(`Could not sync Gmail trash: ${err}`);
@@ -317,7 +321,11 @@ export class EmailsService {
             search: options.search,
           });
           for (const email of providerTrash) {
-            await this.saveLocalCopy(userId, email, email.id, true, false);
+            try {
+              await this.saveLocalCopyIfNotRestored(userId, email, email.id, true, email.isSent ?? false);
+            } catch (err) {
+              this.log.warn(`Could not cache Microsoft trash email ${email.id}: ${err}`);
+            }
           }
         } catch (err) {
           this.log.warn(`Could not sync Microsoft trash: ${err}`);
@@ -433,6 +441,44 @@ export class EmailsService {
   ): Promise<void> {
     const existing = await this.repo.findOne({ where: { userId, externalId } });
     if (existing) {
+      await this.repo.update({ id: existing.id }, { isTrashed, isSent });
+      return;
+    }
+    await this.repo.save(
+      this.repo.create({
+        userId,
+        from: email.from,
+        to: email.to ?? '',
+        subject: email.subject,
+        snippet: email.snippet,
+        body: email.body,
+        isRead: email.isRead,
+        isSent,
+        isTrashed,
+        receivedAt: email.receivedAt,
+        externalId,
+      }),
+    );
+  }
+
+  /**
+   * Like saveLocalCopy but skips the update if the existing local record has
+   * isTrashed=false (meaning the user already restored this email). This prevents
+   * a provider API propagation delay from re-trashing a just-restored email.
+   */
+  private async saveLocalCopyIfNotRestored(
+    userId: string,
+    email: ParsedEmail,
+    externalId: string,
+    isTrashed: boolean,
+    isSent: boolean,
+  ): Promise<void> {
+    const existing = await this.repo.findOne({ where: { userId, externalId } });
+    if (existing) {
+      if (isTrashed && !existing.isTrashed) {
+        // Local record says restored — trust local state, do not re-trash
+        return;
+      }
       await this.repo.update({ id: existing.id }, { isTrashed, isSent });
       return;
     }
