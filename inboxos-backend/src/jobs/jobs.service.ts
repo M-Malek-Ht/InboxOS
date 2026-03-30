@@ -1,14 +1,32 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { JobEntity } from './job.entity';
 
 @Injectable()
-export class JobsService {
+export class JobsService implements OnApplicationBootstrap {
+  private readonly log = new Logger(JobsService.name);
+
   constructor(
     @InjectRepository(JobEntity)
     private readonly repo: Repository<JobEntity>,
+    private readonly dataSource: DataSource,
   ) {}
+
+  /** Ensure schema columns exist — runs on every startup, bypasses migration tracking. */
+  async onApplicationBootstrap(): Promise<void> {
+    try {
+      await this.dataSource.query(
+        `ALTER TABLE jobs ADD COLUMN IF NOT EXISTS "userId" uuid;`,
+      );
+      await this.dataSource.query(
+        `CREATE INDEX IF NOT EXISTS "IDX_jobs_userId" ON jobs ("userId");`,
+      );
+      this.log.log('jobs.userId column ensured');
+    } catch (err: any) {
+      this.log.error(`Failed to ensure jobs.userId column: ${err?.message ?? err}`);
+    }
+  }
 
   /** Create a new job row and return it immediately. */
   async create(type: string, payload: Record<string, any>, userId?: string): Promise<JobEntity> {

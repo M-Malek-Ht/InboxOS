@@ -11,16 +11,30 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
+var JobsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.JobsService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const job_entity_1 = require("./job.entity");
-let JobsService = class JobsService {
+let JobsService = JobsService_1 = class JobsService {
     repo;
-    constructor(repo) {
+    dataSource;
+    log = new common_1.Logger(JobsService_1.name);
+    constructor(repo, dataSource) {
         this.repo = repo;
+        this.dataSource = dataSource;
+    }
+    async onApplicationBootstrap() {
+        try {
+            await this.dataSource.query(`ALTER TABLE jobs ADD COLUMN IF NOT EXISTS "userId" uuid;`);
+            await this.dataSource.query(`CREATE INDEX IF NOT EXISTS "IDX_jobs_userId" ON jobs ("userId");`);
+            this.log.log('jobs.userId column ensured');
+        }
+        catch (err) {
+            this.log.error(`Failed to ensure jobs.userId column: ${err?.message ?? err}`);
+        }
     }
     async create(type, payload, userId) {
         const job = this.repo.create({
@@ -54,9 +68,10 @@ let JobsService = class JobsService {
     }
 };
 exports.JobsService = JobsService;
-exports.JobsService = JobsService = __decorate([
+exports.JobsService = JobsService = JobsService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(job_entity_1.JobEntity)),
-    __metadata("design:paramtypes", [typeorm_2.Repository])
+    __metadata("design:paramtypes", [typeorm_2.Repository,
+        typeorm_2.DataSource])
 ], JobsService);
 //# sourceMappingURL=jobs.service.js.map
