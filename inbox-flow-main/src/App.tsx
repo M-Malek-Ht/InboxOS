@@ -12,7 +12,6 @@ import MarketingPage from "./pages/Index";
 import InboxPage from "./pages/InboxPage";
 import DraftsPage from "./pages/DraftsPage";
 import WorkflowsPage from "./pages/WorkflowsPage";
-import CalendarPage from "./pages/CalendarPage";
 import SentPage from "./pages/SentPage";
 import TrashPage from "./pages/TrashPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -76,7 +75,6 @@ const App = () => (
                 <Route path="/trash" element={<TrashPage />} />
                 <Route path="/drafts" element={<DraftsPage />} />
                 <Route path="/workflows" element={<WorkflowsPage />} />
-                <Route path="/calendar" element={<CalendarPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />

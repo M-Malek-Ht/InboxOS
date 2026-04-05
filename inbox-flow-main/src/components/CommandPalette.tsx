@@ -13,7 +13,6 @@ import {
   Inbox,
   FileText,
   CheckSquare,
-  Calendar,
   Settings,
   Search,
   Mail,
@@ -65,7 +64,6 @@ export function CommandPalette({
     { name: 'Inbox', path: '/inbox', icon: Inbox },
     { name: 'Drafts', path: '/drafts', icon: FileText },
     { name: 'Workflows', path: '/workflows', icon: CheckSquare },
-    { name: 'Calendar', path: '/calendar', icon: Calendar },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 

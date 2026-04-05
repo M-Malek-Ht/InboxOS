@@ -22,7 +22,6 @@ const pageTitles: Record<string, string> = {
   '/inbox': 'Inbox',
   '/drafts': 'Drafts',
   '/workflows': 'Workflows',
-  '/calendar': 'Calendar',
   '/settings': 'Settings',
 };
 
