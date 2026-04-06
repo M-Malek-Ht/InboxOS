@@ -160,6 +160,14 @@ interface EmailListItemProps {
 
 function EmailListItem({ email, isSelected, onClick }: EmailListItemProps) {
   const timeAgo = formatDistanceToNow(new Date(email.receivedAt), { addSuffix: true });
+  const priorityLabel =
+    email.priorityScore === undefined
+      ? null
+      : email.priorityScore >= 80
+        ? 'High'
+        : email.priorityScore >= 50
+          ? 'Med'
+          : 'Low';
 
   return (
     <button
@@ -205,8 +213,8 @@ function EmailListItem({ email, isSelected, onClick }: EmailListItemProps) {
             {!email.isRead && (
               <Mail className="h-3 w-3 text-primary" />
             )}
-            {email.priorityScore && email.priorityScore >= 80 && (
-              <PriorityIndicator priority="High" score={email.priorityScore} />
+            {priorityLabel && email.priorityScore !== undefined && (
+              <PriorityIndicator priority={priorityLabel} score={email.priorityScore} />
             )}
           </div>
         </div>

@@ -190,6 +190,14 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
   if (!email) return null;
 
   const receivedDate = new Date(email.receivedAt);
+  const priorityLabel =
+    email.priorityScore === undefined
+      ? null
+      : email.priorityScore >= 80
+        ? 'High'
+        : email.priorityScore >= 50
+          ? 'Med'
+          : 'Low';
 
   return (
     <motion.div
@@ -262,9 +270,9 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
 
         {/* Classification info */}
         <div className="flex items-center flex-wrap gap-2">
-          {email.priorityScore !== undefined && email.priorityScore >= 80 && (
+          {priorityLabel && email.priorityScore !== undefined && (
             <PriorityIndicator 
-              priority="High" 
+              priority={priorityLabel}
               score={email.priorityScore}
               showLabel
             />
