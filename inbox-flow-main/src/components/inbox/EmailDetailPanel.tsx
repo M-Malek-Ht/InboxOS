@@ -4,7 +4,7 @@ import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useThread, us
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
-import { CategoryBadge, PriorityIndicator, JobStatus } from '@/components/ui/badges';
+import { PriorityIndicator, JobStatus } from '@/components/ui/badges';
 import { EmailDetailSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
 import { ReplyComposer } from './ReplyComposer';
@@ -262,28 +262,14 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
 
         {/* Classification info */}
         <div className="flex items-center flex-wrap gap-2">
-          {email.category && <CategoryBadge category={email.category} />}
-          {email.priorityScore !== undefined && (
+          {email.priorityScore !== undefined && email.priorityScore >= 80 && (
             <PriorityIndicator 
-              priority={email.priorityScore >= 80 ? 'High' : email.priorityScore >= 50 ? 'Med' : 'Low'} 
+              priority="High" 
               score={email.priorityScore}
               showLabel
             />
           )}
-          {email.needsReply && (
-            <span className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-priority-med/15 text-priority-med">
-              Needs Reply
-            </span>
-          )}
-          {email.tags.map(tag => (
-            <span 
-              key={tag}
-              className="inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
-            >
-              {tag}
-            </span>
-          ))}
-          
+
           {(classifyJobId || extractJobId) && (
             <JobStatus status={classifyJob?.status || extractJob?.status || 'queued'} />
           )}

@@ -3,7 +3,7 @@ import { Email, Category } from '@/lib/types';
 import { useEmails, useMarkEmailRead } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
-import { CategoryBadge, PriorityIndicator } from '@/components/ui/badges';
+import { PriorityIndicator } from '@/components/ui/badges';
 import { EmailListSkeleton } from '@/components/ui/skeletons';
 import { EmptyInbox } from '@/components/ui/empty-states';
 import { Button } from '@/components/ui/button';
@@ -200,19 +200,13 @@ function EmailListItem({ email, isSelected, onClick }: EmailListItemProps) {
           </div>
           <div className="text-xs text-muted-foreground truncate">{email.snippet}</div>
 
-          {/* Tags row */}
+          {/* Priority row */}
           <div className="flex items-center gap-2 mt-2">
             {!email.isRead && (
               <Mail className="h-3 w-3 text-primary" />
             )}
-            {email.category && <CategoryBadge category={email.category} />}
             {email.priorityScore && email.priorityScore >= 80 && (
               <PriorityIndicator priority="High" score={email.priorityScore} />
-            )}
-            {email.needsReply && (
-              <span className="text-xs text-priority-med font-medium">
-                Needs Reply
-              </span>
             )}
           </div>
         </div>
