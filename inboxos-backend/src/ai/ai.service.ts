@@ -50,7 +50,13 @@ export class AiService {
     const message = await this.createUserMessage(
       `Analyze the following email and return a JSON object with these fields:
 - "category": one of "Meetings", "Work", "Personal", "Bills", "Newsletters", "Support", "Other"
-- "priorityScore": integer 0-100 (100 = most urgent)
+- "priorityScore": integer 0-100 using the exact bands below — do NOT cluster scores around 70-75
+  - 0-19:  Automated/no-reply emails, newsletters, marketing, notifications, receipts, shipping updates, social media digests. No human action needed.
+  - 20-39: FYI updates, CC'd threads, low-stakes announcements, informational emails the recipient does not need to act on.
+  - 40-59: Normal work emails that need a response eventually but have no urgency — scheduling, routine questions, non-critical follow-ups.
+  - 60-79: Important emails that need a prompt response — direct requests from colleagues or clients, meetings being scheduled, items with a soft deadline within the week.
+  - 80-100: Urgent or high-stakes emails — hard deadlines today or tomorrow, escalations, critical bugs/outages, executive requests, legal/compliance, payments overdue, or any email explicitly marked urgent.
+  Use the FULL range. Most everyday work emails should score 40-59. Reserve 80+ for genuinely urgent items.
 - "needsReply": boolean (true ONLY if a real person directly expects a personal response. Set to false for: automated/system emails, no-reply or noreply senders, newsletters, marketing, notifications, receipts, shipping updates, password resets, system alerts, social media notifications, calendar invites, and any email that says "do not reply" or "this is an automated message")
 - "tags": array of relevant tags (e.g. "urgent", "deadline", "meeting", "follow-up", "action-required", "fyi", "billing")
 - "summary": a 1-2 sentence summary of the email
