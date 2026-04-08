@@ -1,4 +1,6 @@
-import { Category, TaskPriority, TaskStatus } from '@/lib/types';
+import { Category } from '@/lib/types';
+
+type Priority = 'High' | 'Med' | 'Low';
 import { cn } from '@/lib/utils';
 
 interface CategoryBadgeProps {
@@ -25,14 +27,14 @@ export function CategoryBadge({ category, className }: CategoryBadgeProps) {
 }
 
 interface PriorityIndicatorProps {
-  priority: TaskPriority;
+  priority: Priority;
   score?: number;
   showLabel?: boolean;
   className?: string;
 }
 
 export function PriorityIndicator({ priority, score, showLabel, className }: PriorityIndicatorProps) {
-  const priorityClasses: Record<TaskPriority, string> = {
+  const priorityClasses: Record<Priority, string> = {
     High: 'priority-high',
     Med: 'priority-med',
     Low: 'priority-low',
@@ -46,25 +48,6 @@ export function PriorityIndicator({ priority, score, showLabel, className }: Pri
         <span className="text-xs text-muted-foreground">{score}</span>
       )}
     </div>
-  );
-}
-
-interface StatusBadgeProps {
-  status: TaskStatus;
-  className?: string;
-}
-
-export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const statusClasses: Record<TaskStatus, string> = {
-    Backlog: 'status-backlog',
-    'In Progress': 'status-progress',
-    Done: 'status-done',
-  };
-
-  return (
-    <span className={cn('inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full', statusClasses[status], className)}>
-      {status}
-    </span>
   );
 }
 

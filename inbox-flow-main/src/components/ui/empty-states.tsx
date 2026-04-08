@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import { LucideIcon, Inbox, FileText, CheckSquare, Calendar } from 'lucide-react';
+import { LucideIcon, Inbox, FileText } from 'lucide-react';
 
 interface EmptyStateProps {
   icon?: LucideIcon;
@@ -46,22 +46,3 @@ export function EmptyDrafts() {
   );
 }
 
-export function EmptyTasks() {
-  return (
-    <EmptyState
-      icon={CheckSquare}
-      title="No tasks"
-      description="Create tasks from emails or add them manually to stay organized."
-    />
-  );
-}
-
-export function EmptyCalendar() {
-  return (
-    <EmptyState
-      icon={Calendar}
-      title="No events"
-      description="No events scheduled for this period."
-    />
-  );
-}

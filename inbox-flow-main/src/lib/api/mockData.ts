@@ -1,4 +1,4 @@
-import { Email, Draft, Task, CalendarEvent, Category, TaskStatus, TaskPriority } from '@/lib/types';
+import { Email, Draft, Category } from '@/lib/types';
 
 // Helper to generate IDs
 export const generateId = () => Math.random().toString(36).substring(2, 11);
@@ -9,8 +9,6 @@ const todayStr = now.toISOString();
 const yesterday = new Date(now.getTime() - 86400000);
 const twoDaysAgo = new Date(now.getTime() - 2 * 86400000);
 const threeDaysAgo = new Date(now.getTime() - 3 * 86400000);
-const tomorrow = new Date(now.getTime() + 86400000);
-const nextWeek = new Date(now.getTime() + 7 * 86400000);
 
 export const initialEmails: Email[] = [
   {
@@ -282,106 +280,6 @@ I've added the Tuesday follow-up meeting to my calendar. Looking forward to fina
 
 Best regards`,
     createdAt: yesterday.toISOString(),
-  },
-];
-
-export const initialTasks: Task[] = [
-  {
-    id: 'task-1',
-    emailId: 'email-3',
-    title: 'Investigate webhook timeout issues',
-    description: 'Debug the webhook integration issues reported by Michael. Check server logs and timeout configurations.',
-    status: 'In Progress',
-    priority: 'High',
-    dueDate: todayStr,
-    createdAt: todayStr,
-  },
-  {
-    id: 'task-2',
-    emailId: 'email-1',
-    title: 'Prepare engineering estimates',
-    description: 'Create estimates for the new authentication system for Q4 planning.',
-    status: 'Backlog',
-    priority: 'Med',
-    dueDate: nextWeek.toISOString(),
-    createdAt: yesterday.toISOString(),
-  },
-  {
-    id: 'task-3',
-    title: 'Update lodash dependency',
-    description: 'Address the Dependabot security alert by updating lodash to 4.17.21.',
-    status: 'Backlog',
-    priority: 'High',
-    dueDate: tomorrow.toISOString(),
-    createdAt: todayStr,
-  },
-  {
-    id: 'task-4',
-    title: 'Review benefits enrollment options',
-    description: 'Go through 2025 benefits options before the November 15th deadline.',
-    status: 'Backlog',
-    priority: 'Med',
-    dueDate: new Date(now.getTime() + 10 * 86400000).toISOString(),
-    createdAt: twoDaysAgo.toISOString(),
-  },
-  {
-    id: 'task-5',
-    emailId: 'email-8',
-    title: 'Prepare partnership discussion points',
-    description: 'Prepare talking points for the partnership call with Emily Watson.',
-    status: 'Done',
-    priority: 'Med',
-    createdAt: yesterday.toISOString(),
-  },
-];
-
-export const initialEvents: CalendarEvent[] = [
-  {
-    id: 'event-1',
-    emailId: 'email-1',
-    title: 'Q4 Planning Follow-up',
-    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5, 14, 0).toISOString(),
-    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 5, 15, 0).toISOString(),
-    location: 'Conference Room A / Zoom',
-    notes: 'Finalize Q4 roadmap with team leads',
-    createdAt: yesterday.toISOString(),
-  },
-  {
-    id: 'event-2',
-    title: 'Weekly Standup',
-    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 10, 0).toISOString(),
-    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 10, 30).toISOString(),
-    location: 'Zoom',
-    createdAt: threeDaysAgo.toISOString(),
-  },
-  {
-    id: 'event-3',
-    emailId: 'email-5',
-    title: 'Coffee with David',
-    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 15, 0).toISOString(),
-    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 16, 0).toISOString(),
-    location: 'Brew Lab Coffee',
-    notes: 'Catch up about new project',
-    createdAt: twoDaysAgo.toISOString(),
-  },
-  {
-    id: 'event-4',
-    emailId: 'email-8',
-    title: 'Partnership Call - Partner.com',
-    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 4, 10, 0).toISOString(),
-    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 4, 11, 0).toISOString(),
-    location: 'Zoom',
-    notes: 'Discuss revenue sharing, integration, co-marketing',
-    createdAt: yesterday.toISOString(),
-  },
-  {
-    id: 'event-5',
-    title: 'Design Review',
-    startAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 14, 0).toISOString(),
-    endAt: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 15, 0).toISOString(),
-    location: 'Conference Room B',
-    notes: 'Review dashboard redesign mockups',
-    createdAt: twoDaysAgo.toISOString(),
   },
 ];
 

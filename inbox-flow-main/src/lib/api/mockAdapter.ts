@@ -1,12 +1,10 @@
 import {
-  Email, Draft, Task, CalendarEvent, Job,
+  Email, Draft, Job,
   EmailsQueryParams, PaginatedResponse, CreateDraftRequest,
-  CreateTaskRequest, UpdateTaskRequest, CreateEventRequest,
-  EventsQueryParams, TasksQueryParams, JobResponse,
-  ClassifyResult, ExtractDatesResult, Category
+  JobResponse, ClassifyResult, Category
 } from '@/lib/types';
 import {
-  initialEmails, initialDrafts, initialTasks, initialEvents,
+  initialEmails, initialDrafts,
   generateId
 } from './mockData';
 
@@ -18,15 +16,11 @@ const JOB_PROCESSING_TIME = 2000;
 class MockStore {
   emails: Email[] = [...initialEmails];
   drafts: Draft[] = [...initialDrafts];
-  tasks: Task[] = [...initialTasks];
-  events: CalendarEvent[] = [...initialEvents];
   jobs: Map<string, Job> = new Map();
 
   reset() {
     this.emails = [...initialEmails];
     this.drafts = [...initialDrafts];
-    this.tasks = [...initialTasks];
-    this.events = [...initialEvents];
     this.jobs.clear();
   }
 }
@@ -240,156 +234,6 @@ function generateDraftContent(email: Email, request: CreateDraftRequest): string
                   '\n\nSincerely apologize for any inconvenience,';
   
   return `${greeting}\n\n${lengthText}${closing}`;
-}
-
-// Task endpoints
-export async function getTasks(params: TasksQueryParams = {}): Promise<Task[]> {
-  await delay(API_DELAY);
-  let tasks = [...store.tasks];
-  
-  if (params.status) {
-    tasks = tasks.filter(t => t.status === params.status);
-  }
-  
-  return tasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-}
-
-export async function createTask(request: CreateTaskRequest): Promise<Task> {
-  await delay(API_DELAY);
-  
-  const task: Task = {
-    id: generateId(),
-    emailId: request.emailId,
-    title: request.title,
-    description: request.description,
-    status: request.status ?? 'Backlog',
-    priority: request.priority,
-    dueDate: request.dueDate,
-    createdAt: new Date().toISOString(),
-  };
-  
-  store.tasks.push(task);
-  return task;
-}
-
-export async function updateTask(id: string, request: UpdateTaskRequest): Promise<Task | null> {
-  await delay(API_DELAY / 2);
-  
-  const task = store.tasks.find(t => t.id === id);
-  if (task) {
-    Object.assign(task, request);
-  }
-  return task || null;
-}
-
-export async function deleteTask(id: string): Promise<boolean> {
-  await delay(API_DELAY / 2);
-  const index = store.tasks.findIndex(t => t.id === id);
-  if (index > -1) {
-    store.tasks.splice(index, 1);
-    return true;
-  }
-  return false;
-}
-
-// Event endpoints
-export async function getEvents(params: EventsQueryParams): Promise<CalendarEvent[]> {
-  await delay(API_DELAY);
-  
-  const from = new Date(params.from);
-  const to = new Date(params.to);
-  
-  return store.events.filter(e => {
-    const start = new Date(e.startAt);
-    return start >= from && start <= to;
-  }).sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
-}
-
-export async function createEvent(request: CreateEventRequest): Promise<CalendarEvent> {
-  await delay(API_DELAY);
-  
-  const event: CalendarEvent = {
-    id: generateId(),
-    emailId: request.emailId,
-    title: request.title,
-    startAt: request.startAt,
-    endAt: request.endAt,
-    location: request.location,
-    notes: request.notes,
-    createdAt: new Date().toISOString(),
-  };
-  
-  store.events.push(event);
-  return event;
-}
-
-export async function updateEvent(id: string, request: Partial<CreateEventRequest>): Promise<CalendarEvent | null> {
-  await delay(API_DELAY / 2);
-  
-  const event = store.events.find(e => e.id === id);
-  if (event) {
-    Object.assign(event, request);
-  }
-  return event || null;
-}
-
-export async function deleteEvent(id: string): Promise<boolean> {
-  await delay(API_DELAY / 2);
-  const index = store.events.findIndex(e => e.id === id);
-  if (index > -1) {
-    store.events.splice(index, 1);
-    return true;
-  }
-  return false;
-}
-
-// Extract dates job
-export async function extractDates(emailId: string): Promise<JobResponse> {
-  await delay(API_DELAY / 2);
-  
-  const jobId = generateId();
-  const job: Job = {
-    id: jobId,
-    type: 'extractDates',
-    status: 'queued',
-  };
-  store.jobs.set(jobId, job);
-  
-  setTimeout(() => {
-    job.status = 'processing';
-  }, 500);
-  
-  setTimeout(() => {
-    const email = store.emails.find(e => e.id === emailId);
-    if (email) {
-      // Generate a suggested event based on email content
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(10, 0, 0, 0);
-      
-      const endTime = new Date(tomorrow);
-      endTime.setHours(11, 0, 0, 0);
-      
-      const result: ExtractDatesResult = {
-        suggestedEvent: {
-          emailId,
-          title: `Follow-up: ${email.subject}`,
-          startAt: tomorrow.toISOString(),
-          endAt: endTime.toISOString(),
-          location: 'TBD',
-          notes: `Extracted from email: ${email.snippet}`,
-        },
-      };
-      
-      job.status = 'done';
-      job.result = result;
-    } else {
-      job.status = 'failed';
-      job.error = 'Email not found';
-    }
-  }, JOB_PROCESSING_TIME);
-  
-  return { jobId };
 }
 
 // Job polling

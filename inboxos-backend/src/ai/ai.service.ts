@@ -16,14 +16,6 @@ export interface GenerateDraftOptions {
   instruction?: string;
 }
 
-export interface ExtractedEvent {
-  title: string;
-  startAt: string;
-  endAt: string;
-  location?: string;
-  notes?: string;
-}
-
 @Injectable()
 export class AiService {
   private client: Anthropic;
@@ -139,77 +131,6 @@ Write ONLY the reply body text. Do not include "Subject:", "To:", greeting heade
     const message = await this.createUserMessage(prompt, 2048);
 
     return message.content[0].type === 'text' ? message.content[0].text : '';
-  }
-
-  async extractDates(email: {
-    from: string;
-    subject: string;
-    body: string;
-  }): Promise<ExtractedEvent[]> {
-    const safeFrom = this.truncateForPrompt(email.from, 320);
-    const safeSubject = this.truncateForPrompt(email.subject, 500);
-    const safeBody = this.truncateForPrompt(
-      email.body,
-      AiService.MAX_CLASSIFY_BODY_CHARS,
-    );
-
-    const nowIso = new Date().toISOString();
-    const message = await this.createUserMessage(
-      `Extract calendar events from the email below.
-
-Return ONLY valid JSON in this exact shape:
-{
-  "events": [
-    {
-      "title": "string",
-      "startAt": "ISO-8601 datetime with timezone",
-      "endAt": "ISO-8601 datetime with timezone",
-      "location": "string",
-      "notes": "string"
-    }
-  ]
-}
-
-Rules:
-- If no concrete event can be inferred, return {"events":[]}.
-- Use current datetime ${nowIso} as reference for relative dates ("tomorrow", "next Monday", etc.).
-- Do not invent impossible dates.
-- Keep titles short and human-readable.
-
-From: ${safeFrom}
-Subject: ${safeSubject}
-Body:
-${safeBody}`,
-      1200,
-    );
-
-    const text =
-      message.content[0].type === 'text' ? message.content[0].text : '';
-    const result = this.parseJsonObject(text);
-    const rawEvents = Array.isArray(result.events) ? result.events : [];
-
-    const parsedEvents: ExtractedEvent[] = [];
-
-    for (const e of rawEvents) {
-        const title = typeof e?.title === 'string' ? e.title.trim() : '';
-        const startAt = typeof e?.startAt === 'string' ? e.startAt : '';
-        const endAt = typeof e?.endAt === 'string' ? e.endAt : '';
-        if (!title || !startAt || !endAt) continue;
-
-        const startTs = new Date(startAt).getTime();
-        const endTs = new Date(endAt).getTime();
-        if (Number.isNaN(startTs) || Number.isNaN(endTs) || endTs <= startTs) continue;
-
-        parsedEvents.push({
-          title,
-          startAt: new Date(startTs).toISOString(),
-          endAt: new Date(endTs).toISOString(),
-          location: typeof e?.location === 'string' ? e.location : '',
-          notes: typeof e?.notes === 'string' ? e.notes : '',
-        });
-    }
-
-    return parsedEvents;
   }
 
   private async createUserMessage(content: string, maxTokens: number) {

@@ -7,8 +7,6 @@ import {
   ArrowRight,
   Sparkles,
   Inbox,
-  CheckSquare,
-  Calendar,
   Zap,
   Shield,
   Wand2,
@@ -41,14 +39,9 @@ const features = [
     icon: Inbox,
   },
   {
-    title: "Workflow boards",
-    description: "Turn emails into tasks and track progress without leaving the inbox.",
-    icon: CheckSquare,
-  },
-  {
-    title: "Calendar aware",
-    description: "Keep meetings and deadlines in view as you reply and schedule.",
-    icon: Calendar,
+    title: "AI classification",
+    description: "Emails are automatically categorized and prioritized so nothing gets missed.",
+    icon: Sparkles,
   },
   {
     title: "Draft momentum",
@@ -70,21 +63,21 @@ const features = [
 const steps = [
   {
     title: "Connect your inbox",
-    description: "Bring email, tasks, and calendar into one shared workflow view.",
+    description: "Link your Google or Microsoft account and see your emails immediately.",
   },
   {
     title: "Triage with intent",
-    description: "Prioritize what matters and convert threads into clear next steps.",
+    description: "AI classifies and prioritizes incoming emails so you focus on what matters.",
   },
   {
-    title: "Ship work faster",
-    description: "Draft, schedule, and close loops without bouncing between tools.",
+    title: "Reply faster",
+    description: "Generate AI drafts, choose the tone and length, and send in seconds.",
   },
 ];
 
 const stats = [
-  { label: "Unified workspace", value: "Inbox, tasks, calendar" },
-  { label: "Views", value: "Dashboard, inbox, workflows" },
+  { label: "Unified workspace", value: "Inbox, drafts, sent, trash" },
+  { label: "Views", value: "Dashboard, inbox, drafts" },
   { label: "Modes", value: "Light and dark themes" },
 ];
 
@@ -174,7 +167,7 @@ const Index = () => {
               <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  Unified inbox, tasks, and calendar
+                  Unified inbox with AI-powered drafts
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
@@ -294,8 +287,8 @@ const Index = () => {
                   A calm workspace that feels fast and familiar.
                 </h2>
                 <p className="text-muted-foreground">
-                  InboxOS organizes your work by intent. Draft responses, move emails to workflows,
-                  and keep scheduling context in view.
+                  InboxOS organizes your work by intent. Classify emails automatically,
+                  draft responses with AI, and reply with confidence.
                 </p>
                 <div className="space-y-3 text-sm text-muted-foreground">
                   {stats.map((stat) => (

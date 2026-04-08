@@ -1,13 +1,12 @@
 import { useMemo } from 'react';
-import { useEmails, useTasks, useAutoClassify } from '@/lib/api/hooks';
-import { format } from 'date-fns';
+import { useEmails, useAutoClassify } from '@/lib/api/hooks';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CategoryBadge, PriorityIndicator, StatusBadge } from '@/components/ui/badges';
+import { CategoryBadge } from '@/components/ui/badges';
 import { StatCardSkeleton } from '@/components/ui/skeletons';
 import { PageTransition } from '@/components/PageTransition';
-import { CheckSquare, AlertCircle, ArrowRight, Mail } from 'lucide-react';
+import { AlertCircle, ArrowRight, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { LucideIcon } from 'lucide-react';
 
@@ -24,19 +23,14 @@ const fadeUp = {
 export default function Dashboard() {
   const { data: emailsData, isLoading: emailsLoading } = useEmails({ limit: 40 });
   useAutoClassify(emailsData?.data);
-  const { data: tasks, isLoading: tasksLoading } = useTasks();
 
   const stats = useMemo(() => {
     const unreadCount = emailsData?.data.filter((e) => !e.isRead).length || 0;
     const needsReplyCount = emailsData?.data.filter((e) => e.needsReply).length || 0;
-    const openTasks = tasks?.filter((t) => t.status !== 'Done').length || 0;
-    return { unreadCount, needsReplyCount, openTasks };
-  }, [emailsData, tasks]);
+    return { unreadCount, needsReplyCount };
+  }, [emailsData]);
 
-  const highPriorityEmails = emailsData?.data.filter((e) => (e.priorityScore ?? 0) >= 80).slice(0, 3);
-  const tasksDueSoon = tasks?.filter((t) => t.dueDate && t.status !== 'Done').slice(0, 3);
-
-  const isLoading = emailsLoading || tasksLoading;
+  const highPriorityEmails = emailsData?.data.filter((e) => (e.priorityScore ?? 0) >= 80).slice(0, 5);
 
   return (
     <PageTransition>
@@ -54,10 +48,10 @@ export default function Dashboard() {
           variants={stagger}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+          className="grid grid-cols-1 md:grid-cols-2 gap-4"
         >
-          {isLoading ? (
-            [...Array(3)].map((_, i) => <StatCardSkeleton key={i} />)
+          {emailsLoading ? (
+            [...Array(2)].map((_, i) => <StatCardSkeleton key={i} />)
           ) : (
             <>
               <motion.div variants={fadeUp}>
@@ -72,9 +66,6 @@ export default function Dashboard() {
                   color="amber"
                 />
               </motion.div>
-              <motion.div variants={fadeUp}>
-                <StatCard icon={CheckSquare} label="Open Tasks" value={stats.openTasks} href="/workflows" />
-              </motion.div>
             </>
           )}
         </motion.div>
@@ -83,7 +74,6 @@ export default function Dashboard() {
           variants={stagger}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         >
           <motion.div variants={fadeUp}>
             <Card>
@@ -110,38 +100,6 @@ export default function Dashboard() {
                 ))}
                 {(!highPriorityEmails || highPriorityEmails.length === 0) && (
                   <p className="text-sm text-muted-foreground text-center py-4">No high priority emails</p>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div variants={fadeUp}>
-            <Card>
-              <CardHeader className="flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base font-semibold">Tasks Due Soon</CardTitle>
-                <Link to="/workflows">
-                  <Button variant="ghost" size="sm">
-                    View all <ArrowRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </Link>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {tasksDueSoon?.map((task) => (
-                  <div key={task.id} className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                    <PriorityIndicator priority={task.priority} />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-sm truncate">{task.title}</div>
-                      {task.dueDate && (
-                        <div className="text-xs text-muted-foreground">
-                          {format(new Date(task.dueDate), 'MMM d')}
-                        </div>
-                      )}
-                    </div>
-                    <StatusBadge status={task.status} />
-                  </div>
-                ))}
-                {(!tasksDueSoon || tasksDueSoon.length === 0) && (
-                  <p className="text-sm text-muted-foreground text-center py-4">No tasks due soon</p>
                 )}
               </CardContent>
             </Card>

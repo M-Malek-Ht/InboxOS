@@ -1,9 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef, useEffect } from 'react';
 import {
-  Email, Task,
-  EmailsQueryParams, CreateDraftRequest, CreateTaskRequest,
-  UpdateTaskRequest, CreateEventRequest, EventsQueryParams, TasksQueryParams
+  Email,
+  EmailsQueryParams, CreateDraftRequest,
 } from '@/lib/types';
 import { api } from './realAdapter';
 
@@ -15,8 +14,6 @@ export const queryKeys = {
   emails: (params?: EmailsQueryParams) => ['emails', params] as const,
   email: (id: string) => ['email', id] as const,
   drafts: (emailId: string) => ['drafts', emailId] as const,
-  tasks: (params?: TasksQueryParams) => ['tasks', params] as const,
-  events: (params: EventsQueryParams) => ['events', params] as const,
   job: (jobId: string) => ['job', jobId] as const,
 };
 
@@ -129,111 +126,6 @@ export function useGenerateDraft() {
   });
 }
 
-// Task hooks
-export function useTasks(params: TasksQueryParams = {}) {
-  return useQuery({
-    queryKey: queryKeys.tasks(params),
-    queryFn: () => api.getTasks(params),
-  });
-}
-
-export function useCreateTask() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (request: CreateTaskRequest) => api.createTask(request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-}
-
-export function useUpdateTask() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ id, request }: { id: string; request: UpdateTaskRequest }) =>
-      api.updateTask(id, request),
-    onMutate: async ({ id, request }) => {
-      await queryClient.cancelQueries({ queryKey: ['tasks'] });
-
-      const previousTasks = queryClient.getQueriesData<Task[]>({ queryKey: ['tasks'] });
-
-      previousTasks.forEach(([queryKey, tasks]) => {
-        if (!tasks) return;
-
-        queryClient.setQueryData<Task[]>(
-          queryKey,
-          tasks.map((task) => (task.id === id ? { ...task, ...request } : task)),
-        );
-      });
-
-      return { previousTasks };
-    },
-    onError: (_err, _variables, context) => {
-      context?.previousTasks?.forEach(([queryKey, tasks]) => {
-        queryClient.setQueryData(queryKey, tasks);
-      });
-    },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-}
-
-export function useDeleteTask() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (id: string) => api.deleteTask(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-    },
-  });
-}
-
-// Event hooks
-export function useEvents(params: EventsQueryParams) {
-  return useQuery({
-    queryKey: queryKeys.events(params),
-    queryFn: () => api.getEvents(params),
-  });
-}
-
-export function useCreateEvent() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (request: CreateEventRequest) => api.createEvent(request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-    },
-  });
-}
-
-export function useUpdateEvent() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ id, request }: { id: string; request: Partial<CreateEventRequest> }) =>
-      api.updateEvent(id, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-    },
-  });
-}
-
-export function useDeleteEvent() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: (id: string) => api.deleteEvent(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['events'] });
-    },
-  });
-}
-
 // Job polling hook
 export function useJob(jobId: string | null) {
   return useQuery({
@@ -287,13 +179,6 @@ export function usePermanentlyDeleteEmail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['trash-emails'] });
     },
-  });
-}
-
-// Extract dates hook
-export function useExtractDates() {
-  return useMutation({
-    mutationFn: (emailId: string) => api.extractDates(emailId),
   });
 }
 

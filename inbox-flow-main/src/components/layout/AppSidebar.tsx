@@ -5,7 +5,6 @@ import {
   Send,
   Trash2,
   FileText,
-  CheckSquare,
   Settings,
   LayoutDashboard,
   ChevronLeft,
@@ -24,7 +23,6 @@ const navItems = [
   { name: 'Sent', path: '/sent', icon: Send },
   { name: 'Trash', path: '/trash', icon: Trash2 },
   { name: 'Drafts', path: '/drafts', icon: FileText },
-  { name: 'Workflows', path: '/workflows', icon: CheckSquare },
 ];
 
 export function AppSidebar() {

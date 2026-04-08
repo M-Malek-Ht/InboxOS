@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useCreateTask, useExtractDates, useThread, useDeleteEmail, useUntrashEmail, usePermanentlyDeleteEmail } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useThread, useDeleteEmail, useUntrashEmail, usePermanentlyDeleteEmail } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
@@ -12,8 +12,6 @@ import { toast } from 'sonner';
 import {
   X,
   RotateCw,
-  CheckSquare,
-  Calendar,
   FileText,
   ArrowRight,
   Reply,
@@ -37,24 +35,19 @@ interface EmailDetailPanelProps {
 export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, mode = 'inbox' }: EmailDetailPanelProps) {
   const queryClient = useQueryClient();
   const [classifyJobId, setClassifyJobId] = useState<string | null>(null);
-  const [extractJobId, setExtractJobId] = useState<string | null>(null);
   const [showReply, setShowReply] = useState(false);
 
   const classifyEmail = useClassifyEmail();
-  const createTask = useCreateTask();
-  const extractDates = useExtractDates();
   const deleteEmail = useDeleteEmail();
   const untrashEmail = useUntrashEmail();
   const permanentlyDeleteEmail = usePermanentlyDeleteEmail();
   const { data: threadMessages } = useThread(mode === 'inbox' ? (email?.id ?? null) : null);
 
   const { data: classifyJob } = useJob(classifyJobId);
-  const { data: extractJob } = useJob(extractJobId);
 
   // Reset state when email changes
   useEffect(() => {
     setClassifyJobId(null);
-    setExtractJobId(null);
     setShowReply(false);
   }, [email?.id]);
 
@@ -88,17 +81,6 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
     }
   }, [classifyJob?.status, classifyJob?.result, classifyJob?.error, email?.id, queryClient]);
 
-  // Handle extract dates job completion
-  useEffect(() => {
-    if (extractJob?.status === 'done') {
-      toast.success('Dates extracted! Check calendar for suggested event.');
-      setExtractJobId(null);
-    } else if (extractJob?.status === 'failed') {
-      toast.error('Date extraction failed');
-      setExtractJobId(null);
-    }
-  }, [extractJob?.status]);
-
   const handleClassify = async () => {
     if (!email) return;
     try {
@@ -107,33 +89,6 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to start classification';
-      toast.error(message);
-    }
-  };
-
-  const handleCreateTask = async () => {
-    if (!email) return;
-    try {
-      await createTask.mutateAsync({
-        emailId: email.id,
-        title: `Follow up: ${email.subject}`,
-        description: email.snippet,
-        priority: email.priorityScore && email.priorityScore >= 80 ? 'High' : 'Med',
-      });
-      toast.success('Task created');
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to create task';
-      toast.error(message);
-    }
-  };
-
-  const handleExtractDates = async () => {
-    if (!email) return;
-    try {
-      const result = await extractDates.mutateAsync(email.id);
-      setExtractJobId(result.jobId);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to extract dates';
       toast.error(message);
     }
   };
@@ -278,8 +233,8 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
             />
           )}
 
-          {(classifyJobId || extractJobId) && (
-            <JobStatus status={classifyJob?.status || extractJob?.status || 'queued'} />
+          {classifyJobId && (
+            <JobStatus status={classifyJob?.status || 'queued'} />
           )}
         </div>
 
@@ -307,26 +262,6 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
           >
             <RotateCw className={cn('h-4 w-4', classifyJobId && 'animate-spin')} />
             Re-classify
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCreateTask}
-            disabled={createTask.isPending}
-            className="gap-2"
-          >
-            <CheckSquare className="h-4 w-4" />
-            Create Task
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExtractDates}
-            disabled={!!extractJobId}
-            className="gap-2"
-          >
-            <Calendar className={cn('h-4 w-4', extractJobId && 'animate-spin')} />
-            Extract Dates
           </Button>
           <Button
             variant="outline"

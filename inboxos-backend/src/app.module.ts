@@ -4,8 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { join } from 'path';
 import { HealthController } from './health.controller';
 import { EmailsModule } from './emails/emails.module';
-import { TasksModule } from './tasks/tasks.module';
-import { EventsModule } from './events/events.module';
 import { DraftsModule } from './drafts/drafts.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -48,10 +46,6 @@ import { SettingsModule } from './settings/settings.module';
     }),
 
     EmailsModule,
-
-    TasksModule,
-
-    EventsModule,
 
     DraftsModule,
 

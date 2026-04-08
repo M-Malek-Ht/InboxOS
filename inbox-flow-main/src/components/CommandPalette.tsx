@@ -12,7 +12,6 @@ import {
 import {
   Inbox,
   FileText,
-  CheckSquare,
   Settings,
   Search,
   Mail,
@@ -63,7 +62,6 @@ export function CommandPalette({
     { name: 'Dashboard', path: '/', icon: Search },
     { name: 'Inbox', path: '/inbox', icon: Inbox },
     { name: 'Drafts', path: '/drafts', icon: FileText },
-    { name: 'Workflows', path: '/workflows', icon: CheckSquare },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
@@ -119,12 +117,6 @@ export function CommandPalette({
           <CommandItem onSelect={() => navigateTo('/inbox')}>
             <Inbox className="mr-2 h-4 w-4" />
             <span>Check Inbox</span>
-            <kbd className="kbd ml-auto">G then I</kbd>
-          </CommandItem>
-          <CommandItem onSelect={() => navigateTo('/workflows')}>
-            <CheckSquare className="mr-2 h-4 w-4" />
-            <span>View Tasks</span>
-            <kbd className="kbd ml-auto">G then T</kbd>
           </CommandItem>
         </CommandGroup>
       </CommandList>

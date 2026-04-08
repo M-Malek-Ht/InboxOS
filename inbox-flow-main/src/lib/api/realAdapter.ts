@@ -1,16 +1,10 @@
 import { http } from './http';
 import type {
   CreateDraftRequest,
-  CreateEventRequest,
-  CreateTaskRequest,
   Draft,
   Email,
-  EventsQueryParams,
   Length,
-  Task,
-  TasksQueryParams,
   Tone,
-  UpdateTaskRequest,
 } from '@/lib/types';
 
 interface EmailApiResponse {
@@ -30,28 +24,6 @@ interface EmailApiResponse {
   isSent?: boolean;
 }
 
-interface TaskApiResponse {
-  id: string;
-  emailId?: string;
-  title: string;
-  description?: string;
-  status?: string;
-  priority?: string;
-  dueDate?: string | null;
-  createdAt: string;
-}
-
-interface EventApiResponse {
-  id: string;
-  emailId?: string;
-  title: string;
-  startAt: string;
-  endAt: string;
-  location?: string;
-  notes?: string;
-  createdAt: string;
-}
-
 interface JobApiResponse {
   id: string;
   type: string;
@@ -66,64 +38,6 @@ interface SettingsApiResponse {
 }
 
 const encodePathSegment = (value: string) => encodeURIComponent(value);
-
-type FrontendTaskStatus = 'Backlog' | 'In Progress' | 'Done';
-type FrontendTaskPriority = 'Low' | 'Med' | 'High';
-
-function normalizeTaskStatus(status?: string): FrontendTaskStatus {
-  switch ((status ?? '').toLowerCase()) {
-    case 'done':
-      return 'Done';
-    case 'in progress':
-    case 'in_progress':
-    case 'in-progress':
-    case 'progress':
-      return 'In Progress';
-    case 'backlog':
-    case 'todo':
-    default:
-      return 'Backlog';
-  }
-}
-
-function normalizeTaskPriority(priority?: string): FrontendTaskPriority {
-  switch ((priority ?? '').toLowerCase()) {
-    case 'high':
-      return 'High';
-    case 'low':
-      return 'Low';
-    case 'med':
-    case 'medium':
-    default:
-      return 'Med';
-  }
-}
-
-function serializeTaskStatus(status?: string) {
-  switch (status) {
-    case 'Done':
-      return 'done';
-    case 'In Progress':
-      return 'in progress';
-    case 'Backlog':
-      return 'todo';
-    default:
-      return status;
-  }
-}
-
-function serializeTaskPriority(priority?: string) {
-  switch (priority) {
-    case 'High':
-      return 'high';
-    case 'Low':
-      return 'low';
-    case 'Med':
-      return 'medium';
-    default:
-      return priority;
-  }
-}
 
 /** Strip HTML tags and decode common entities to get readable plain text. */
 function stripHtml(html: string): string {
@@ -187,23 +101,6 @@ function mapEmail(e: EmailApiResponse): Email {
   };
 }
 
-function mapTask(task: TaskApiResponse): Task {
-  return {
-    ...task,
-    status: normalizeTaskStatus(task?.status),
-    priority: normalizeTaskPriority(task?.priority),
-    dueDate: task?.dueDate ?? undefined,
-  };
-}
-
-function mapEvent(event: EventApiResponse) {
-  return {
-    ...event,
-    startAt: event?.startAt,
-    endAt: event?.endAt,
-  };
-}
-
 export const api = {
   getEmails: async (params: { filter?: string; search?: string; limit?: number }) => {
     const qs = new URLSearchParams();
@@ -234,59 +131,6 @@ export const api = {
   getDrafts: (emailId: string) => http.get<Draft[]>(`/emails/${encodePathSegment(emailId)}/drafts`),
   generateDraft: (emailId: string, request: CreateDraftRequest) =>
     http.post<{ jobId: string }>(`/emails/${encodePathSegment(emailId)}/drafts`, request),
-
-  // Tasks (match hooks names)
-  getTasks: async (params: TasksQueryParams) => {
-    const tasks = await http.get<TaskApiResponse[]>('/tasks');
-    const mapped = tasks.map(mapTask);
-
-    if (params?.status) {
-      return mapped.filter((task) => task.status === params.status);
-    }
-
-    return mapped;
-  },
-  createTask: async (request: CreateTaskRequest) => {
-    const created = await http.post<TaskApiResponse>('/tasks', {
-      ...request,
-      status: serializeTaskStatus(request?.status),
-      priority: serializeTaskPriority(request?.priority),
-    });
-    return mapTask(created);
-  },
-  updateTask: async (id: string, request: UpdateTaskRequest) => {
-    const updated = await http.patch<TaskApiResponse>(`/tasks/${encodePathSegment(id)}`, {
-      ...request,
-      status: serializeTaskStatus(request?.status),
-      priority: serializeTaskPriority(request?.priority),
-    });
-    return mapTask(updated);
-  },
-  deleteTask: (id: string) => http.delete<{ ok: boolean }>(`/tasks/${encodePathSegment(id)}`),
-
-  // Events (match hooks names)
-  getEvents: async (params: EventsQueryParams) => {
-    const qs = new URLSearchParams();
-    if (params?.from) qs.set('from', params.from);
-    if (params?.to) qs.set('to', params.to);
-
-    const events = await http.get<EventApiResponse[]>(`/events${qs.toString() ? `?${qs.toString()}` : ''}`);
-    return events
-      .map(mapEvent)
-      .filter((event) => {
-        if (!params?.from && !params?.to) return true;
-
-        const start = new Date(event.startAt).getTime();
-        const from = params?.from ? new Date(params.from).getTime() : Number.NEGATIVE_INFINITY;
-        const to = params?.to ? new Date(params.to).getTime() : Number.POSITIVE_INFINITY;
-
-        return start >= from && start <= to;
-      });
-  },
-  createEvent: async (request: CreateEventRequest) => mapEvent(await http.post<EventApiResponse>('/events', request)),
-  updateEvent: async (id: string, request: Partial<CreateEventRequest>) =>
-    mapEvent(await http.patch<EventApiResponse>(`/events/${encodePathSegment(id)}`, request)),
-  deleteEvent: (id: string) => http.delete<{ ok: boolean }>(`/events/${encodePathSegment(id)}`),
 
   // Email actions
   markEmailRead: async (id: string, isRead: boolean) =>
@@ -349,9 +193,6 @@ export const api = {
   permanentlyDeleteEmail: async (emailId: string) =>
     http.delete<{ ok: boolean }>(`/emails/${encodePathSegment(emailId)}/permanent`),
 
-  // Date extraction
-  extractDates: async (emailId: string) =>
-    http.post<{ jobId: string }>(`/emails/${encodePathSegment(emailId)}/extract-dates`, {}),
   resetDemoData: async () => {
     throw new Error('Demo data reset is only available in the mock adapter.');
   },

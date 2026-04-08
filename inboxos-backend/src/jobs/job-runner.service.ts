@@ -6,15 +6,12 @@ import { AiService } from '../ai/ai.service';
 import { DraftEntity } from '../drafts/draft.entity';
 import { EmailInsightEntity } from '../emails/email-insight.entity';
 import { SettingsService } from '../settings/settings.service';
-import { EventEntity } from '../events/event.entity';
 
 /**
  * Central async job runner.
  *
  * Kicks off AI work in the background (non-blocking) and updates
- * the Job row as it progresses.  Every new job type you add
- * (workflows, calendar extraction, etc.) just needs a new case
- * in the dispatch switch.
+ * the Job row as it progresses.
  */
 @Injectable()
 export class JobRunnerService {
@@ -28,8 +25,6 @@ export class JobRunnerService {
     private readonly draftsRepo: Repository<DraftEntity>,
     @InjectRepository(EmailInsightEntity)
     private readonly insightsRepo: Repository<EmailInsightEntity>,
-    @InjectRepository(EventEntity)
-    private readonly eventsRepo: Repository<EventEntity>,
   ) {}
 
   /**
@@ -77,9 +72,6 @@ export class JobRunnerService {
           break;
         case 'auto-draft-batch':
           result = await this.handleAutoDraftBatch(jobId, payload);
-          break;
-        case 'extractDates':
-          result = await this.handleExtractDates(payload);
           break;
         default:
           throw new Error(`Unknown job type: ${type}`);
@@ -277,47 +269,6 @@ export class JobRunnerService {
       content: saved.content,
       tone: saved.tone,
       length: saved.length,
-    };
-  }
-
-  private async handleExtractDates(payload: Record<string, any>) {
-    const { userId, emailId, from, subject, body } = payload as {
-      userId: string;
-      emailId: string;
-      from: string;
-      subject: string;
-      body: string;
-    };
-
-    const extracted = await this.ai.extractDates({ from, subject, body });
-    if (!extracted.length) {
-      return { created: 0, events: [] };
-    }
-
-    const toCreate = extracted.map((event) =>
-      this.eventsRepo.create({
-        userId,
-        title: event.title,
-        startAt: new Date(event.startAt),
-        endAt: new Date(event.endAt),
-        location: event.location ?? '',
-        notes: event.notes ?? '',
-      }),
-    );
-
-    const saved = await this.eventsRepo.save(toCreate);
-
-    return {
-      created: saved.length,
-      events: saved.map((event) => ({
-        id: event.id,
-        emailId,
-        title: event.title,
-        startAt: event.startAt,
-        endAt: event.endAt,
-        location: event.location,
-        notes: event.notes,
-      })),
     };
   }
 

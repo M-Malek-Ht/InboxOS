@@ -16,7 +16,7 @@ export class JobEntity {
   @Column({ type: 'uuid', nullable: true })
   userId: string | null;
 
-  /** classify | draft | extractDates  — extensible for workflows, calendar, etc. */
+  /** classify | draft | classify-batch | auto-draft-batch */
   @Column()
   type: string;
 

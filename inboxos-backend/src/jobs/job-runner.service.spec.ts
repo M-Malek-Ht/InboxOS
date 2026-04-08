@@ -22,7 +22,6 @@ describe('JobRunnerService', () => {
   const ai = {
     classifyEmail: jest.fn(),
     generateDraft: jest.fn(),
-    extractDates: jest.fn(),
   } as unknown as AiService;
 
   const settingsService = {
@@ -38,11 +37,6 @@ describe('JobRunnerService', () => {
   const insightsRepo = {
     upsert: jest.fn(),
     find: jest.fn(),
-  };
-
-  const eventsRepo = {
-    create: jest.fn((v) => v),
-    save: jest.fn(),
   };
 
   beforeEach(() => {
@@ -67,7 +61,6 @@ describe('JobRunnerService', () => {
       settingsService,
       draftsRepo as any,
       insightsRepo as any,
-      eventsRepo as any,
     );
   });
 
