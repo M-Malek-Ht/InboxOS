@@ -1,6 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, Index } from 'typeorm';
 
 @Entity('drafts')
+@Index('IDX_drafts_userId_emailId_status', ['userId', 'emailId', 'status'])
 export class DraftEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

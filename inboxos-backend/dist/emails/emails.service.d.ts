@@ -15,13 +15,14 @@ export declare class EmailsService {
     private readonly microsoftMail;
     private readonly log;
     constructor(repo: Repository<EmailEntity>, insightsRepo: Repository<EmailInsightEntity>, draftsRepo: Repository<DraftEntity>, usersRepo: Repository<User>, gmail: GmailService, microsoftMail: MicrosoftMailService);
-    private getAccessTokenOrFallback;
+    private resolveProviderClient;
     listForUser(userId: string, options?: {
         filter?: string;
         search?: string;
         limit?: number;
     }): Promise<ParsedEmail[] | EmailEntity[]>;
     getForUser(userId: string, emailId: string): Promise<EmailEntity | ParsedEmail | null>;
+    getManyForUser(userId: string, emailIds: string[]): Promise<ParsedEmail[] | EmailEntity[]>;
     setReadState(userId: string, emailId: string, isRead: boolean): Promise<EmailEntity | {
         ok: boolean;
     } | null>;
@@ -55,7 +56,7 @@ export declare class EmailsService {
         ok: boolean;
     }>;
     private saveLocalCopy;
-    private saveLocalCopyIfNotRestored;
+    private syncProviderEmailsToLocal;
     private applyEmailFilters;
     private getEmailMeta;
     private attachInsights;

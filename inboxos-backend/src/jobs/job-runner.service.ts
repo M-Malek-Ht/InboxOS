@@ -7,15 +7,10 @@ import { DraftEntity } from '../drafts/draft.entity';
 import { EmailInsightEntity } from '../emails/email-insight.entity';
 import { SettingsService } from '../settings/settings.service';
 
-/**
- * Central async job runner.
- *
- * Kicks off AI work in the background (non-blocking) and updates
- * the Job row as it progresses.
- */
 @Injectable()
 export class JobRunnerService {
   private readonly log = new Logger(JobRunnerService.name);
+  private static readonly RATE_LIMIT_DELAY_MS = 1500;
 
   constructor(
     private readonly jobs: JobsService,
@@ -27,10 +22,6 @@ export class JobRunnerService {
     private readonly insightsRepo: Repository<EmailInsightEntity>,
   ) {}
 
-  /**
-   * Create a job row, fire-and-forget the processing, return the jobId
-   * immediately so the controller can respond to the client.
-   */
   async enqueue(type: string, payload: Record<string, any>): Promise<string> {
     const userId = this.getUserIdFromPayload(payload);
     if (!userId) {
@@ -40,15 +31,14 @@ export class JobRunnerService {
     const job = await this.jobs.create(type, payload, userId);
     this.log.log(`Job ${job.id} [${type}] queued`);
 
-    // fire-and-forget — intentionally not awaited
     this.process(job.id, type, payload).catch((err: any) =>
-      this.log.error(`Unhandled error in job ${job.id}: ${this.getErrorMessage(err)}`),
+      this.log.error(
+        `Unhandled error in job ${job.id}: ${this.getErrorMessage(err)}`,
+      ),
     );
 
     return job.id;
   }
-
-  // ── internal dispatch ───────────────────────────────
 
   private async process(
     jobId: string,
@@ -86,8 +76,6 @@ export class JobRunnerService {
     }
   }
 
-  // ── handlers ────────────────────────────────────────
-
   private async handleClassify(payload: Record<string, any>) {
     const { userId, emailId, from, subject, body } = payload;
     const result = await this.ai.classifyEmail({ from, subject, body });
@@ -119,7 +107,7 @@ export class JobRunnerService {
     let classified = 0;
     let failed = 0;
 
-    for (const item of items) {
+    for (const [index, item] of items.entries()) {
       try {
         const result = await this.ai.classifyEmail({
           from: item.from,
@@ -140,19 +128,19 @@ export class JobRunnerService {
           ['userId', 'emailId'],
         );
         classified++;
-        this.log.log(`Batch ${jobId}: classified ${classified}/${items.length} (${item.emailId})`);
+        this.log.log(
+          `Batch ${jobId}: classified ${classified}/${items.length} (${item.emailId})`,
+        );
       } catch (err: any) {
         failed++;
-        this.log.warn(`Batch ${jobId}: failed ${item.emailId}: ${err.message}`);
+        this.log.warn(
+          `Batch ${jobId}: failed ${item.emailId}: ${this.getErrorMessage(err)}`,
+        );
       }
 
-      // Small delay between requests to stay within rate limits
-      if (classified + failed < items.length) {
-        await new Promise((r) => setTimeout(r, 1500));
-      }
+      await this.waitBetweenItems(index, items.length);
     }
 
-    // After classification, auto-draft replies for emails that need them
     try {
       const needsReplyInsights = await this.insightsRepo.find({
         where: {
@@ -163,19 +151,29 @@ export class JobRunnerService {
       });
 
       if (needsReplyInsights.length > 0) {
+        const needsReplyIds = new Set(
+          needsReplyInsights.map((insight) => insight.emailId),
+        );
         const autoDraftItems = items.filter((item) =>
-          needsReplyInsights.some((insight) => insight.emailId === item.emailId),
+          needsReplyIds.has(item.emailId),
         );
 
         if (autoDraftItems.length > 0) {
-          this.log.log(`Batch ${jobId}: enqueuing auto-draft for ${autoDraftItems.length} emails`);
-          this.enqueue('auto-draft-batch', { userId, items: autoDraftItems }).catch((err) =>
-            this.log.warn(`Failed to enqueue auto-draft-batch: ${err.message}`),
+          this.log.log(
+            `Batch ${jobId}: enqueuing auto-draft for ${autoDraftItems.length} emails`,
+          );
+          this.enqueue('auto-draft-batch', { userId, items: autoDraftItems }).catch(
+            (err) =>
+              this.log.warn(
+                `Failed to enqueue auto-draft-batch: ${this.getErrorMessage(err)}`,
+              ),
           );
         }
       }
     } catch (err: any) {
-      this.log.warn(`Batch ${jobId}: auto-draft trigger failed: ${err.message}`);
+      this.log.warn(
+        `Batch ${jobId}: auto-draft trigger failed: ${this.getErrorMessage(err)}`,
+      );
     }
 
     return { classified, failed, total: items.length };
@@ -191,15 +189,21 @@ export class JobRunnerService {
     const tone = settings.defaultTone || 'Professional';
     const length = settings.defaultLength || 'Medium';
 
+    const existingDrafts = await this.draftsRepo.find({
+      select: ['emailId'],
+      where: {
+        userId,
+        status: 'draft',
+        emailId: In(items.map((item) => item.emailId)),
+      },
+    });
+    const existingDraftIds = new Set(existingDrafts.map((draft) => draft.emailId));
+
     let drafted = 0;
     let skipped = 0;
 
-    for (const item of items) {
-      // Skip if a draft already exists for this email
-      const existingDraft = await this.draftsRepo.findOne({
-        where: { userId, emailId: item.emailId, status: 'draft' },
-      });
-      if (existingDraft) {
+    for (const [index, item] of items.entries()) {
+      if (existingDraftIds.has(item.emailId)) {
         skipped++;
         continue;
       }
@@ -220,37 +224,36 @@ export class JobRunnerService {
           status: 'draft',
         });
         await this.draftsRepo.save(draft);
+        existingDraftIds.add(item.emailId);
         drafted++;
         this.log.log(`Auto-draft ${jobId}: drafted ${drafted} (${item.emailId})`);
       } catch (err: any) {
-        this.log.warn(`Auto-draft ${jobId}: failed ${item.emailId}: ${err.message}`);
+        this.log.warn(
+          `Auto-draft ${jobId}: failed ${item.emailId}: ${this.getErrorMessage(err)}`,
+        );
       }
 
-      // Rate limit delay
-      if (drafted + skipped < items.length) {
-        await new Promise((r) => setTimeout(r, 1500));
-      }
+      await this.waitBetweenItems(index, items.length);
     }
 
     return { drafted, skipped, total: items.length };
   }
 
   private async handleDraft(payload: Record<string, any>) {
-    const { userId, emailId, from, subject, body, tone, length, instruction } = payload;
+    const { userId, emailId, from, subject, body, tone, length, instruction } =
+      payload;
 
     const content = await this.ai.generateDraft(
       { from, subject, body },
       { tone: tone ?? 'Professional', length: length ?? 'Medium', instruction },
     );
 
-    // Auto-increment version for this email
     const latestDraft = await this.draftsRepo.findOne({
       where: { userId, emailId },
       order: { version: 'DESC' },
     });
     const nextVersion = (latestDraft?.version ?? 0) + 1;
 
-    // Persist the draft
     const draft = this.draftsRepo.create({
       userId,
       emailId,
@@ -270,6 +273,14 @@ export class JobRunnerService {
       tone: saved.tone,
       length: saved.length,
     };
+  }
+
+  private async waitBetweenItems(index: number, total: number): Promise<void> {
+    if (index < total - 1) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, JobRunnerService.RATE_LIMIT_DELAY_MS),
+      );
+    }
   }
 
   private getUserIdFromPayload(payload: Record<string, any>): string | null {

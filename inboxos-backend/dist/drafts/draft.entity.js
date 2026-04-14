@@ -67,6 +67,7 @@ __decorate([
     __metadata("design:type", Date)
 ], DraftEntity.prototype, "createdAt", void 0);
 exports.DraftEntity = DraftEntity = __decorate([
-    (0, typeorm_1.Entity)('drafts')
+    (0, typeorm_1.Entity)('drafts'),
+    (0, typeorm_1.Index)('IDX_drafts_userId_emailId_status', ['userId', 'emailId', 'status'])
 ], DraftEntity);
 //# sourceMappingURL=draft.entity.js.map

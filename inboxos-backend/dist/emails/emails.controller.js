@@ -60,18 +60,13 @@ let EmailsController = class EmailsController {
         const unclassified = await this.emails.getUnclassifiedIds(req.user.id, ids);
         if (!unclassified.length)
             return { jobId: null, count: 0 };
-        const items = [];
-        for (const emailId of unclassified) {
-            const email = await this.emails.getForUser(req.user.id, emailId);
-            if (!email)
-                continue;
-            items.push({
-                emailId,
-                from: email.from,
-                subject: email.subject,
-                body: email.body ?? '',
-            });
-        }
+        const emails = await this.emails.getManyForUser(req.user.id, unclassified);
+        const items = emails.map((email) => ({
+            emailId: email.id,
+            from: email.from,
+            subject: email.subject,
+            body: email.body ?? '',
+        }));
         if (!items.length)
             return { jobId: null, count: 0 };
         const jobId = await this.runner.enqueue('classify-batch', {
@@ -98,19 +93,6 @@ let EmailsController = class EmailsController {
         if (!email)
             throw new common_1.NotFoundException('Email not found');
         const jobId = await this.runner.enqueue('classify', {
-            userId: req.user.id,
-            emailId: id,
-            from: email.from,
-            subject: email.subject,
-            body: email.body ?? '',
-        });
-        return { jobId };
-    }
-    async extractDates(id, req) {
-        const email = await this.emails.getForUser(req.user.id, id);
-        if (!email)
-            throw new common_1.NotFoundException('Email not found');
-        const jobId = await this.runner.enqueue('extractDates', {
             userId: req.user.id,
             emailId: id,
             from: email.from,
@@ -235,15 +217,6 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], EmailsController.prototype, "classify", null);
-__decorate([
-    (0, common_1.Post)(':id/extract-dates'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
-    __param(0, (0, common_1.Param)('id')),
-    __param(1, (0, common_1.Request)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [String, Object]),
-    __metadata("design:returntype", Promise)
-], EmailsController.prototype, "extractDates", null);
 exports.EmailsController = EmailsController = __decorate([
     (0, common_1.Controller)('emails'),
     __metadata("design:paramtypes", [emails_service_1.EmailsService,

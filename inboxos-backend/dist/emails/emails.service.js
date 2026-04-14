@@ -39,14 +39,18 @@ let EmailsService = EmailsService_1 = class EmailsService {
         this.gmail = gmail;
         this.microsoftMail = microsoftMail;
     }
-    async getAccessTokenOrFallback(userId) {
+    async resolveProviderClient(userId) {
         const gmailToken = await this.gmail.getAccessTokenForUser(userId);
         if (gmailToken) {
-            return { token: gmailToken, provider: 'gmail' };
+            return { provider: 'gmail', token: gmailToken, service: this.gmail };
         }
         const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
         if (msToken) {
-            return { token: msToken, provider: 'microsoft' };
+            return {
+                provider: 'microsoft',
+                token: msToken,
+                service: this.microsoftMail,
+            };
         }
         return null;
     }
@@ -54,11 +58,10 @@ let EmailsService = EmailsService_1 = class EmailsService {
         const user = await this.usersRepo.findOne({ where: { id: userId } });
         const userEmail = user?.email?.toLowerCase();
         this.log.log(`listForUser: userId=${userId}, userEmail=${userEmail}`);
-        const tokenResult = await this.getAccessTokenOrFallback(userId);
-        if (tokenResult) {
-            const { token, provider } = tokenResult;
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient) {
+            const { token, provider, service } = providerClient;
             try {
-                const service = provider === 'gmail' ? this.gmail : this.microsoftMail;
                 const emails = await service.listEmails(token, {
                     maxResults: options.filter && options.filter !== 'unread'
                         ? Math.max(options.limit ?? 40, 100)
@@ -94,50 +97,73 @@ let EmailsService = EmailsService_1 = class EmailsService {
     }
     async getForUser(userId, emailId) {
         this.log.debug(`getForUser called with emailId=${emailId}`);
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
             try {
-                const email = await this.gmail.getMessage(accessToken, emailId);
+                const email = await providerClient.service.getMessage(providerClient.token, emailId);
                 this.log.debug(`Gmail getMessage returned ${email ? 'a result' : 'no result'}`);
                 return this.attachInsight(userId, email);
             }
-            catch (error) {
+            catch {
                 this.log.warn(`Gmail getMessage failed for emailId=${emailId}`);
             }
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
+        if (providerClient?.provider === 'microsoft') {
             try {
-                const email = await this.microsoftMail.getMessage(msToken, emailId);
+                const email = await providerClient.service.getMessage(providerClient.token, emailId);
                 this.log.debug(`Microsoft getMessage returned ${email ? 'a result' : 'no result'}`);
                 return this.attachInsight(userId, email);
             }
-            catch (error) {
+            catch {
                 this.log.warn(`Microsoft getMessage failed for emailId=${emailId}`);
             }
         }
         const email = await this.repo.findOne({ where: { id: emailId, userId } });
         return this.attachInsight(userId, email);
     }
+    async getManyForUser(userId, emailIds) {
+        if (!emailIds.length)
+            return [];
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient) {
+            const results = await Promise.all(emailIds.map(async (emailId) => {
+                try {
+                    return await providerClient.service.getMessage(providerClient.token, emailId);
+                }
+                catch {
+                    return null;
+                }
+            }));
+            const emails = results.filter((email) => email !== null);
+            return this.attachInsights(userId, emails);
+        }
+        const emails = await this.repo.find({
+            where: { userId, id: (0, typeorm_2.In)(emailIds) },
+        });
+        const emailsById = new Map(emails.map((email) => [email.id, email]));
+        const ordered = emailIds
+            .map((emailId) => emailsById.get(emailId))
+            .filter((email) => Boolean(email));
+        return this.attachInsights(userId, ordered);
+    }
     async setReadState(userId, emailId, isRead) {
         this.log.debug(`setReadState emailId=${emailId} isRead=${isRead}`);
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
             if (isRead) {
-                await this.gmail.markAsRead(accessToken, emailId);
+                await providerClient.service.markAsRead(providerClient.token, emailId);
             }
             else {
-                await this.gmail.markAsUnread(accessToken, emailId);
+                await providerClient.service.markAsUnread(providerClient.token, emailId);
             }
             return { ok: true };
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
+        if (providerClient?.provider === 'microsoft') {
             if (isRead) {
-                await this.microsoftMail.markAsRead(msToken, emailId);
+                await providerClient.service.markAsRead(providerClient.token, emailId);
             }
             else {
-                await this.microsoftMail.markAsUnread(msToken, emailId);
+                await providerClient.service.markAsUnread(providerClient.token, emailId);
             }
             return { ok: true };
         }
@@ -145,27 +171,25 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return this.repo.findOne({ where: { id: emailId, userId } });
     }
     async getThread(userId, emailId) {
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
             try {
-                const email = await this.gmail.getMessage(accessToken, emailId);
+                const email = await providerClient.service.getMessage(providerClient.token, emailId);
                 if (email.threadId) {
-                    const messages = await this.gmail.getThread(accessToken, email.threadId);
-                    return messages;
+                    return providerClient.service.getThread(providerClient.token, email.threadId);
                 }
                 return [email];
             }
-            catch (error) {
+            catch {
                 this.log.warn(`Gmail getThread failed for emailId=${emailId}`);
             }
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
+        if (providerClient?.provider === 'microsoft') {
             try {
-                const email = await this.microsoftMail.getMessage(msToken, emailId);
+                const email = await providerClient.service.getMessage(providerClient.token, emailId);
                 return [email];
             }
-            catch (error) {
+            catch {
                 this.log.warn(`Microsoft getThread failed for emailId=${emailId}`);
             }
         }
@@ -173,10 +197,10 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return email ? [email] : [];
     }
     async sendReply(userId, emailId, body, draftId) {
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
-            const email = await this.gmail.getMessage(accessToken, emailId);
-            await this.gmail.sendReply(accessToken, {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
+            const email = await providerClient.service.getMessage(providerClient.token, emailId);
+            await providerClient.service.sendReply(providerClient.token, {
                 to: email.from,
                 subject: email.subject,
                 body,
@@ -188,9 +212,8 @@ let EmailsService = EmailsService_1 = class EmailsService {
             }
             return { ok: true, provider: 'gmail' };
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
-            await this.microsoftMail.sendReply(msToken, emailId, body);
+        if (providerClient?.provider === 'microsoft') {
+            await providerClient.service.sendReply(providerClient.token, emailId, body);
             if (draftId) {
                 await this.draftsRepo.update({ id: draftId, userId }, { status: 'sent' });
             }
@@ -221,10 +244,10 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return { ok: true, provider: 'local' };
     }
     async listSentForUser(userId, options = {}) {
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
             try {
-                return await this.gmail.listSentEmails(accessToken, {
+                return await providerClient.service.listSentEmails(providerClient.token, {
                     maxResults: options.limit,
                     search: options.search,
                 });
@@ -233,10 +256,9 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 this.log.error(`Gmail sent list error: ${error}`);
             }
         }
-        const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-        if (msToken) {
+        if (providerClient?.provider === 'microsoft') {
             try {
-                return await this.microsoftMail.listSentEmails(msToken, {
+                return await providerClient.service.listSentEmails(providerClient.token, {
                     maxResults: options.limit,
                     search: options.search,
                 });
@@ -258,50 +280,34 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return qb.getMany();
     }
     async listTrashForUser(userId, options = {}) {
-        const gmailToken = await this.gmail.getAccessTokenForUser(userId);
-        if (gmailToken) {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
             try {
-                const providerTrash = await this.gmail.listTrashEmails(gmailToken, {
+                const providerTrash = await providerClient.service.listTrashEmails(providerClient.token, {
                     maxResults: options.limit ?? 40,
                     search: options.search,
                 });
-                for (const email of providerTrash) {
-                    try {
-                        await this.saveLocalCopyIfNotRestored(userId, email, email.id, true, email.isSent ?? false);
-                    }
-                    catch (err) {
-                        this.log.warn(`Could not cache Gmail trash email ${email.id}: ${err}`);
-                    }
-                }
+                await this.syncProviderEmailsToLocal(userId, providerTrash, true);
             }
             catch (err) {
                 this.log.warn(`Could not sync Gmail trash: ${err}`);
             }
         }
-        else {
-            const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-            if (msToken) {
-                try {
-                    const providerTrash = await this.microsoftMail.listTrashEmails(msToken, {
-                        maxResults: options.limit ?? 40,
-                        search: options.search,
-                    });
-                    for (const email of providerTrash) {
-                        try {
-                            await this.saveLocalCopyIfNotRestored(userId, email, email.id, true, email.isSent ?? false);
-                        }
-                        catch (err) {
-                            this.log.warn(`Could not cache Microsoft trash email ${email.id}: ${err}`);
-                        }
-                    }
-                }
-                catch (err) {
-                    this.log.warn(`Could not sync Microsoft trash: ${err}`);
-                }
+        else if (providerClient?.provider === 'microsoft') {
+            try {
+                const providerTrash = await providerClient.service.listTrashEmails(providerClient.token, {
+                    maxResults: options.limit ?? 40,
+                    search: options.search,
+                });
+                await this.syncProviderEmailsToLocal(userId, providerTrash, true);
+            }
+            catch (err) {
+                this.log.warn(`Could not sync Microsoft trash: ${err}`);
             }
         }
         const qb = this.repo.createQueryBuilder('email');
-        qb.where('email.userId = :userId', { userId }).andWhere('email.isTrashed = true');
+        qb.where('email.userId = :userId', { userId })
+            .andWhere('email.isTrashed = true');
         if (options.search) {
             qb.andWhere('email.subject ILIKE :q OR email.from ILIKE :q OR email.snippet ILIKE :q', { q: `%${options.search}%` });
         }
@@ -313,17 +319,14 @@ let EmailsService = EmailsService_1 = class EmailsService {
     async untrashEmail(userId, emailId) {
         const local = await this.repo.findOne({ where: { id: emailId, userId } });
         const externalId = local?.externalId ?? null;
-        if (externalId) {
-            const accessToken = await this.gmail.getAccessTokenForUser(userId);
-            if (accessToken) {
-                await this.gmail.untrashMessage(accessToken, externalId);
-            }
-            else {
-                const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-                if (msToken) {
-                    await this.microsoftMail.untrashMessage(msToken, externalId);
-                }
-            }
+        const providerClient = externalId
+            ? await this.resolveProviderClient(userId)
+            : null;
+        if (externalId && providerClient?.provider === 'gmail') {
+            await providerClient.service.untrashMessage(providerClient.token, externalId);
+        }
+        else if (externalId && providerClient?.provider === 'microsoft') {
+            await providerClient.service.untrashMessage(providerClient.token, externalId);
         }
         await this.repo.update({ id: emailId, userId }, { isTrashed: false });
         return { ok: true, provider: externalId ? 'provider' : 'local' };
@@ -331,17 +334,14 @@ let EmailsService = EmailsService_1 = class EmailsService {
     async permanentDeleteEmail(userId, emailId) {
         const local = await this.repo.findOne({ where: { id: emailId, userId } });
         const externalId = local?.externalId ?? null;
-        if (externalId) {
-            const accessToken = await this.gmail.getAccessTokenForUser(userId);
-            if (accessToken) {
-                await this.gmail.permanentlyDeleteMessage(accessToken, externalId);
-            }
-            else {
-                const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-                if (msToken) {
-                    await this.microsoftMail.deleteMessage(msToken, externalId);
-                }
-            }
+        const providerClient = externalId
+            ? await this.resolveProviderClient(userId)
+            : null;
+        if (externalId && providerClient?.provider === 'gmail') {
+            await providerClient.service.permanentlyDeleteMessage(providerClient.token, externalId);
+        }
+        else if (externalId && providerClient?.provider === 'microsoft') {
+            await providerClient.service.deleteMessage(providerClient.token, externalId);
         }
         await this.repo.delete({ id: emailId, userId });
         await this.insightsRepo.delete({ userId, emailId });
@@ -349,32 +349,29 @@ let EmailsService = EmailsService_1 = class EmailsService {
         return { ok: true };
     }
     async deleteEmail(userId, emailId) {
-        const accessToken = await this.gmail.getAccessTokenForUser(userId);
-        if (accessToken) {
+        const providerClient = await this.resolveProviderClient(userId);
+        if (providerClient?.provider === 'gmail') {
             try {
-                const email = await this.gmail.getMessage(accessToken, emailId);
+                const email = await providerClient.service.getMessage(providerClient.token, emailId);
                 await this.saveLocalCopy(userId, email, emailId, true, false);
             }
             catch (err) {
                 this.log.warn(`Could not cache Gmail email ${emailId} before trashing: ${err}`);
             }
-            await this.gmail.trashMessage(accessToken, emailId);
+            await providerClient.service.trashMessage(providerClient.token, emailId);
+        }
+        else if (providerClient?.provider === 'microsoft') {
+            try {
+                const email = await providerClient.service.getMessage(providerClient.token, emailId);
+                await this.saveLocalCopy(userId, email, emailId, true, false);
+            }
+            catch (err) {
+                this.log.warn(`Could not cache Microsoft email ${emailId} before trashing: ${err}`);
+            }
+            await providerClient.service.deleteMessage(providerClient.token, emailId);
         }
         else {
-            const msToken = await this.microsoftMail.getAccessTokenForUser(userId);
-            if (msToken) {
-                try {
-                    const email = await this.microsoftMail.getMessage(msToken, emailId);
-                    await this.saveLocalCopy(userId, email, emailId, true, false);
-                }
-                catch (err) {
-                    this.log.warn(`Could not cache Microsoft email ${emailId} before trashing: ${err}`);
-                }
-                await this.microsoftMail.deleteMessage(msToken, emailId);
-            }
-            else {
-                await this.repo.update({ id: emailId, userId }, { isTrashed: true });
-            }
+            await this.repo.update({ id: emailId, userId }, { isTrashed: true });
         }
         await this.insightsRepo.delete({ userId, emailId });
         await this.draftsRepo.delete({ emailId, userId });
@@ -400,28 +397,40 @@ let EmailsService = EmailsService_1 = class EmailsService {
             externalId,
         }));
     }
-    async saveLocalCopyIfNotRestored(userId, email, externalId, isTrashed, isSent) {
-        const existing = await this.repo.findOne({ where: { userId, externalId } });
-        if (existing) {
-            if (isTrashed && !existing.isTrashed) {
-                return;
-            }
-            await this.repo.update({ id: existing.id }, { isTrashed, isSent });
+    async syncProviderEmailsToLocal(userId, emails, isTrashed) {
+        if (!emails.length)
             return;
+        const externalIds = emails.map((email) => email.id);
+        const existing = await this.repo.find({
+            where: { userId, externalId: (0, typeorm_2.In)(externalIds) },
+        });
+        const existingByExternalId = new Map(existing
+            .filter((email) => email.externalId)
+            .map((email) => [email.externalId, email]));
+        const recordsToSave = [];
+        for (const email of emails) {
+            const current = existingByExternalId.get(email.id);
+            if (current && isTrashed && !current.isTrashed) {
+                continue;
+            }
+            recordsToSave.push(this.repo.create({
+                ...current,
+                userId,
+                from: email.from,
+                to: email.to ?? '',
+                subject: email.subject,
+                snippet: email.snippet,
+                body: email.body,
+                isRead: email.isRead,
+                isSent: email.isSent ?? false,
+                isTrashed,
+                receivedAt: email.receivedAt,
+                externalId: email.id,
+            }));
         }
-        await this.repo.save(this.repo.create({
-            userId,
-            from: email.from,
-            to: email.to ?? '',
-            subject: email.subject,
-            snippet: email.snippet,
-            body: email.body,
-            isRead: email.isRead,
-            isSent,
-            isTrashed,
-            receivedAt: email.receivedAt,
-            externalId,
-        }));
+        if (recordsToSave.length > 0) {
+            await this.repo.save(recordsToSave);
+        }
     }
     applyEmailFilters(emails, options = {}) {
         let filtered = emails;
@@ -440,7 +449,9 @@ let EmailsService = EmailsService_1 = class EmailsService {
                 }
                 break;
         }
-        return typeof options.limit === 'number' ? filtered.slice(0, options.limit) : filtered;
+        return typeof options.limit === 'number'
+            ? filtered.slice(0, options.limit)
+            : filtered;
     }
     getEmailMeta(email) {
         return email;

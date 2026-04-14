@@ -11,6 +11,10 @@ import { AiModule } from './ai/ai.module';
 import { JobsModule } from './jobs/jobs.module';
 import { SettingsModule } from './settings/settings.module';
 
+function isEnvFlagEnabled(value: string | undefined, fallback: boolean): boolean {
+  return value ? value.toLowerCase() === 'true' : fallback;
+}
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -19,20 +23,21 @@ import { SettingsModule } from './settings/settings.module';
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
         const isProduction = cfg.get<string>('NODE_ENV') === 'production';
-        const dbSyncRaw = cfg.get<string>('DB_SYNC');
-        const dbSslRaw = cfg.get<string>('DB_SSL');
-
-        const synchronize = dbSyncRaw
-          ? dbSyncRaw.toLowerCase() === 'true'
-          : !isProduction;
-        const useSsl = dbSslRaw
-          ? dbSslRaw.toLowerCase() === 'true'
-          : isProduction;
+        const synchronize = isEnvFlagEnabled(
+          cfg.get<string>('DB_SYNC'),
+          !isProduction,
+        );
+        const useSsl = isEnvFlagEnabled(
+          cfg.get<string>('DB_SSL'),
+          isProduction,
+        );
+        const dbPort = Number(cfg.get<string>('DB_PORT') ?? 5432);
+        const dbPoolMax = Number(cfg.get<string>('DB_POOL_MAX') ?? 10);
 
         return {
           type: 'postgres',
           host: cfg.get<string>('DB_HOST'),
-          port: Number(cfg.get<string>('DB_PORT')),
+          port: Number.isFinite(dbPort) ? dbPort : 5432,
           username: cfg.get<string>('DB_USER'),
           password: cfg.get<string>('DB_PASS'),
           database: cfg.get<string>('DB_NAME'),
@@ -41,6 +46,10 @@ import { SettingsModule } from './settings/settings.module';
           migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
           migrationsRun: true,
           ssl: useSsl ? { rejectUnauthorized: false } : false,
+          extra: {
+            max: Number.isFinite(dbPoolMax) ? dbPoolMax : 10,
+            keepAlive: true,
+          },
         };
       },
     }),

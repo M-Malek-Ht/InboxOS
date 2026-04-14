@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, Index } from 'typeorm';
 
 @Entity('emails')
+@Index('IDX_emails_userId_externalId', ['userId', 'externalId'])
+@Index('IDX_emails_userId_folder_receivedAt', ['userId', 'isTrashed', 'isSent', 'receivedAt'])
 export class EmailEntity {
   @PrimaryGeneratedColumn('uuid')
   id: string;

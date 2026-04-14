@@ -76,6 +76,8 @@ __decorate([
     __metadata("design:type", Object)
 ], EmailEntity.prototype, "externalId", void 0);
 exports.EmailEntity = EmailEntity = __decorate([
-    (0, typeorm_1.Entity)('emails')
+    (0, typeorm_1.Entity)('emails'),
+    (0, typeorm_1.Index)('IDX_emails_userId_externalId', ['userId', 'externalId']),
+    (0, typeorm_1.Index)('IDX_emails_userId_folder_receivedAt', ['userId', 'isTrashed', 'isSent', 'receivedAt'])
 ], EmailEntity);
 //# sourceMappingURL=email.entity.js.map

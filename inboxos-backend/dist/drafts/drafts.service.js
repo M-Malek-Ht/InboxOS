@@ -11,7 +11,6 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var DraftsService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.DraftsService = void 0;
 const common_1 = require("@nestjs/common");
@@ -19,26 +18,12 @@ const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
 const draft_entity_1 = require("./draft.entity");
 const email_entity_1 = require("../emails/email.entity");
-let DraftsService = DraftsService_1 = class DraftsService {
+let DraftsService = class DraftsService {
     draftsRepo;
     emailsRepo;
-    dataSource;
-    log = new common_1.Logger(DraftsService_1.name);
-    constructor(draftsRepo, emailsRepo, dataSource) {
+    constructor(draftsRepo, emailsRepo) {
         this.draftsRepo = draftsRepo;
         this.emailsRepo = emailsRepo;
-        this.dataSource = dataSource;
-    }
-    async onApplicationBootstrap() {
-        try {
-            await this.dataSource.query(`ALTER TABLE drafts ADD COLUMN IF NOT EXISTS "userId" uuid;`);
-            await this.dataSource.query(`CREATE INDEX IF NOT EXISTS "IDX_drafts_userId" ON drafts ("userId");`);
-            await this.dataSource.query(`ALTER TABLE emails ADD COLUMN IF NOT EXISTS "externalId" varchar DEFAULT NULL;`);
-            this.log.log('drafts.userId and emails.externalId columns ensured');
-        }
-        catch (err) {
-            this.log.error(`Failed to ensure schema columns: ${err?.message ?? err}`);
-        }
     }
     async findEmailOrNull(userId, emailId) {
         return this.emailsRepo.findOne({ where: { id: emailId, userId } });
@@ -82,12 +67,11 @@ let DraftsService = DraftsService_1 = class DraftsService {
     }
 };
 exports.DraftsService = DraftsService;
-exports.DraftsService = DraftsService = DraftsService_1 = __decorate([
+exports.DraftsService = DraftsService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(draft_entity_1.DraftEntity)),
     __param(1, (0, typeorm_1.InjectRepository)(email_entity_1.EmailEntity)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        typeorm_2.Repository,
-        typeorm_2.DataSource])
+        typeorm_2.Repository])
 ], DraftsService);
 //# sourceMappingURL=drafts.service.js.map

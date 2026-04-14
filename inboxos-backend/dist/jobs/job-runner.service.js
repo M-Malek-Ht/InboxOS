@@ -22,22 +22,21 @@ const ai_service_1 = require("../ai/ai.service");
 const draft_entity_1 = require("../drafts/draft.entity");
 const email_insight_entity_1 = require("../emails/email-insight.entity");
 const settings_service_1 = require("../settings/settings.service");
-const event_entity_1 = require("../events/event.entity");
-let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
+let JobRunnerService = class JobRunnerService {
+    static { JobRunnerService_1 = this; }
     jobs;
     ai;
     settingsService;
     draftsRepo;
     insightsRepo;
-    eventsRepo;
     log = new common_1.Logger(JobRunnerService_1.name);
-    constructor(jobs, ai, settingsService, draftsRepo, insightsRepo, eventsRepo) {
+    static RATE_LIMIT_DELAY_MS = 1500;
+    constructor(jobs, ai, settingsService, draftsRepo, insightsRepo) {
         this.jobs = jobs;
         this.ai = ai;
         this.settingsService = settingsService;
         this.draftsRepo = draftsRepo;
         this.insightsRepo = insightsRepo;
-        this.eventsRepo = eventsRepo;
     }
     async enqueue(type, payload) {
         const userId = this.getUserIdFromPayload(payload);
@@ -65,9 +64,6 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
                     break;
                 case 'auto-draft-batch':
                     result = await this.handleAutoDraftBatch(jobId, payload);
-                    break;
-                case 'extractDates':
-                    result = await this.handleExtractDates(payload);
                     break;
                 default:
                     throw new Error(`Unknown job type: ${type}`);
@@ -101,7 +97,7 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
         const { userId, items } = payload;
         let classified = 0;
         let failed = 0;
-        for (const item of items) {
+        for (const [index, item] of items.entries()) {
             try {
                 const result = await this.ai.classifyEmail({
                     from: item.from,
@@ -122,11 +118,9 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
             }
             catch (err) {
                 failed++;
-                this.log.warn(`Batch ${jobId}: failed ${item.emailId}: ${err.message}`);
+                this.log.warn(`Batch ${jobId}: failed ${item.emailId}: ${this.getErrorMessage(err)}`);
             }
-            if (classified + failed < items.length) {
-                await new Promise((r) => setTimeout(r, 1500));
-            }
+            await this.waitBetweenItems(index, items.length);
         }
         try {
             const needsReplyInsights = await this.insightsRepo.find({
@@ -137,15 +131,16 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
                 },
             });
             if (needsReplyInsights.length > 0) {
-                const autoDraftItems = items.filter((item) => needsReplyInsights.some((insight) => insight.emailId === item.emailId));
+                const needsReplyIds = new Set(needsReplyInsights.map((insight) => insight.emailId));
+                const autoDraftItems = items.filter((item) => needsReplyIds.has(item.emailId));
                 if (autoDraftItems.length > 0) {
                     this.log.log(`Batch ${jobId}: enqueuing auto-draft for ${autoDraftItems.length} emails`);
-                    this.enqueue('auto-draft-batch', { userId, items: autoDraftItems }).catch((err) => this.log.warn(`Failed to enqueue auto-draft-batch: ${err.message}`));
+                    this.enqueue('auto-draft-batch', { userId, items: autoDraftItems }).catch((err) => this.log.warn(`Failed to enqueue auto-draft-batch: ${this.getErrorMessage(err)}`));
                 }
             }
         }
         catch (err) {
-            this.log.warn(`Batch ${jobId}: auto-draft trigger failed: ${err.message}`);
+            this.log.warn(`Batch ${jobId}: auto-draft trigger failed: ${this.getErrorMessage(err)}`);
         }
         return { classified, failed, total: items.length };
     }
@@ -154,13 +149,19 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
         const settings = await this.settingsService.getForUser(userId);
         const tone = settings.defaultTone || 'Professional';
         const length = settings.defaultLength || 'Medium';
+        const existingDrafts = await this.draftsRepo.find({
+            select: ['emailId'],
+            where: {
+                userId,
+                status: 'draft',
+                emailId: (0, typeorm_2.In)(items.map((item) => item.emailId)),
+            },
+        });
+        const existingDraftIds = new Set(existingDrafts.map((draft) => draft.emailId));
         let drafted = 0;
         let skipped = 0;
-        for (const item of items) {
-            const existingDraft = await this.draftsRepo.findOne({
-                where: { userId, emailId: item.emailId, status: 'draft' },
-            });
-            if (existingDraft) {
+        for (const [index, item] of items.entries()) {
+            if (existingDraftIds.has(item.emailId)) {
                 skipped++;
                 continue;
             }
@@ -176,15 +177,14 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
                     status: 'draft',
                 });
                 await this.draftsRepo.save(draft);
+                existingDraftIds.add(item.emailId);
                 drafted++;
                 this.log.log(`Auto-draft ${jobId}: drafted ${drafted} (${item.emailId})`);
             }
             catch (err) {
-                this.log.warn(`Auto-draft ${jobId}: failed ${item.emailId}: ${err.message}`);
+                this.log.warn(`Auto-draft ${jobId}: failed ${item.emailId}: ${this.getErrorMessage(err)}`);
             }
-            if (drafted + skipped < items.length) {
-                await new Promise((r) => setTimeout(r, 1500));
-            }
+            await this.waitBetweenItems(index, items.length);
         }
         return { drafted, skipped, total: items.length };
     }
@@ -215,33 +215,10 @@ let JobRunnerService = JobRunnerService_1 = class JobRunnerService {
             length: saved.length,
         };
     }
-    async handleExtractDates(payload) {
-        const { userId, emailId, from, subject, body } = payload;
-        const extracted = await this.ai.extractDates({ from, subject, body });
-        if (!extracted.length) {
-            return { created: 0, events: [] };
+    async waitBetweenItems(index, total) {
+        if (index < total - 1) {
+            await new Promise((resolve) => setTimeout(resolve, JobRunnerService_1.RATE_LIMIT_DELAY_MS));
         }
-        const toCreate = extracted.map((event) => this.eventsRepo.create({
-            userId,
-            title: event.title,
-            startAt: new Date(event.startAt),
-            endAt: new Date(event.endAt),
-            location: event.location ?? '',
-            notes: event.notes ?? '',
-        }));
-        const saved = await this.eventsRepo.save(toCreate);
-        return {
-            created: saved.length,
-            events: saved.map((event) => ({
-                id: event.id,
-                emailId,
-                title: event.title,
-                startAt: event.startAt,
-                endAt: event.endAt,
-                location: event.location,
-                notes: event.notes,
-            })),
-        };
     }
     getUserIdFromPayload(payload) {
         const userId = payload?.userId;
@@ -269,11 +246,9 @@ exports.JobRunnerService = JobRunnerService = JobRunnerService_1 = __decorate([
     (0, common_1.Injectable)(),
     __param(3, (0, typeorm_1.InjectRepository)(draft_entity_1.DraftEntity)),
     __param(4, (0, typeorm_1.InjectRepository)(email_insight_entity_1.EmailInsightEntity)),
-    __param(5, (0, typeorm_1.InjectRepository)(event_entity_1.EventEntity)),
     __metadata("design:paramtypes", [jobs_service_1.JobsService,
         ai_service_1.AiService,
         settings_service_1.SettingsService,
-        typeorm_2.Repository,
         typeorm_2.Repository,
         typeorm_2.Repository])
 ], JobRunnerService);

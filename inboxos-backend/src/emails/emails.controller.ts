@@ -92,18 +92,13 @@ export class EmailsController {
 
     if (!unclassified.length) return { jobId: null, count: 0 };
 
-    // Build payload for each email
-    const items: { emailId: string; from: string; subject: string; body: string }[] = [];
-    for (const emailId of unclassified) {
-      const email = await this.emails.getForUser(req.user.id, emailId);
-      if (!email) continue;
-      items.push({
-        emailId,
-        from: email.from,
-        subject: email.subject,
-        body: email.body ?? '',
-      });
-    }
+    const emails = await this.emails.getManyForUser(req.user.id, unclassified);
+    const items = emails.map((email) => ({
+      emailId: email.id,
+      from: email.from,
+      subject: email.subject,
+      body: email.body ?? '',
+    }));
 
     if (!items.length) return { jobId: null, count: 0 };
 

@@ -13,14 +13,15 @@ const typeorm_1 = require("@nestjs/typeorm");
 const path_1 = require("path");
 const health_controller_1 = require("./health.controller");
 const emails_module_1 = require("./emails/emails.module");
-const tasks_module_1 = require("./tasks/tasks.module");
-const events_module_1 = require("./events/events.module");
 const drafts_module_1 = require("./drafts/drafts.module");
 const users_module_1 = require("./users/users.module");
 const auth_module_1 = require("./auth/auth.module");
 const ai_module_1 = require("./ai/ai.module");
 const jobs_module_1 = require("./jobs/jobs.module");
 const settings_module_1 = require("./settings/settings.module");
+function isEnvFlagEnabled(value, fallback) {
+    return value ? value.toLowerCase() === 'true' : fallback;
+}
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -32,18 +33,14 @@ exports.AppModule = AppModule = __decorate([
                 inject: [config_1.ConfigService],
                 useFactory: (cfg) => {
                     const isProduction = cfg.get('NODE_ENV') === 'production';
-                    const dbSyncRaw = cfg.get('DB_SYNC');
-                    const dbSslRaw = cfg.get('DB_SSL');
-                    const synchronize = dbSyncRaw
-                        ? dbSyncRaw.toLowerCase() === 'true'
-                        : !isProduction;
-                    const useSsl = dbSslRaw
-                        ? dbSslRaw.toLowerCase() === 'true'
-                        : isProduction;
+                    const synchronize = isEnvFlagEnabled(cfg.get('DB_SYNC'), !isProduction);
+                    const useSsl = isEnvFlagEnabled(cfg.get('DB_SSL'), isProduction);
+                    const dbPort = Number(cfg.get('DB_PORT') ?? 5432);
+                    const dbPoolMax = Number(cfg.get('DB_POOL_MAX') ?? 10);
                     return {
                         type: 'postgres',
                         host: cfg.get('DB_HOST'),
-                        port: Number(cfg.get('DB_PORT')),
+                        port: Number.isFinite(dbPort) ? dbPort : 5432,
                         username: cfg.get('DB_USER'),
                         password: cfg.get('DB_PASS'),
                         database: cfg.get('DB_NAME'),
@@ -52,12 +49,14 @@ exports.AppModule = AppModule = __decorate([
                         migrations: [(0, path_1.join)(__dirname, 'migrations', '*{.ts,.js}')],
                         migrationsRun: true,
                         ssl: useSsl ? { rejectUnauthorized: false } : false,
+                        extra: {
+                            max: Number.isFinite(dbPoolMax) ? dbPoolMax : 10,
+                            keepAlive: true,
+                        },
                     };
                 },
             }),
             emails_module_1.EmailsModule,
-            tasks_module_1.TasksModule,
-            events_module_1.EventsModule,
             drafts_module_1.DraftsModule,
             users_module_1.UsersModule,
             auth_module_1.AuthModule,
