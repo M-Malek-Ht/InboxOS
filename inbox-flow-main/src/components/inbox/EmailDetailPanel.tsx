@@ -314,21 +314,21 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
             </div>
           </div>
         )}
-      </div>
 
-      {mode === 'inbox' && (
-        <ReplyComposer
-          email={email}
-          onSent={() => {
-            setTimeout(() => {
-              queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
-            }, 1500);
-            setTimeout(() => {
-              queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
-            }, 4000);
-          }}
-        />
-      )}
+        {mode === 'inbox' && (
+          <ReplyComposer
+            email={email}
+            onSent={() => {
+              setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+              }, 1500);
+              setTimeout(() => {
+                queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+              }, 4000);
+            }}
+          />
+        )}
+      </div>
     </motion.div>
   );
 }
