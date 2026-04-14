@@ -10,7 +10,6 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import Dashboard from "./pages/Dashboard";
 import MarketingPage from "./pages/Index";
 import InboxPage from "./pages/InboxPage";
-import DraftsPage from "./pages/DraftsPage";
 import SentPage from "./pages/SentPage";
 import TrashPage from "./pages/TrashPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -72,7 +71,7 @@ const App = () => (
                 <Route path="/inbox" element={<InboxPage />} />
                 <Route path="/sent" element={<SentPage />} />
                 <Route path="/trash" element={<TrashPage />} />
-                <Route path="/drafts" element={<DraftsPage />} />
+                <Route path="/drafts" element={<Navigate to="/inbox" replace />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
               <Route path="*" element={<NotFound />} />

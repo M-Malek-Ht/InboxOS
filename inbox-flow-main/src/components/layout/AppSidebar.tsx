@@ -4,7 +4,6 @@ import {
   Inbox,
   Send,
   Trash2,
-  FileText,
   Settings,
   LayoutDashboard,
   ChevronLeft,
@@ -22,7 +21,6 @@ const navItems = [
   { name: 'Inbox', path: '/inbox', icon: Inbox },
   { name: 'Sent', path: '/sent', icon: Send },
   { name: 'Trash', path: '/trash', icon: Trash2 },
-  { name: 'Drafts', path: '/drafts', icon: FileText },
 ];
 
 export function AppSidebar() {

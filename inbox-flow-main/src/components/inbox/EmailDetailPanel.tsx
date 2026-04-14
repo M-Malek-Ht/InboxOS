@@ -13,14 +13,12 @@ import {
   X,
   RotateCw,
   FileText,
-  ArrowRight,
-  Reply,
   Sparkles,
   Send as SendIcon,
   Trash2,
   ArchiveRestore,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 type EmailListData = { data: Email[]; total: number };
 
@@ -28,14 +26,12 @@ interface EmailDetailPanelProps {
   email: Email | null;
   isLoading?: boolean;
   onClose: () => void;
-  onGenerateDraft?: () => void;
   mode?: 'inbox' | 'sent' | 'trash';
 }
 
-export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, mode = 'inbox' }: EmailDetailPanelProps) {
+export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: EmailDetailPanelProps) {
   const queryClient = useQueryClient();
   const [classifyJobId, setClassifyJobId] = useState<string | null>(null);
-  const [showReply, setShowReply] = useState(false);
 
   const classifyEmail = useClassifyEmail();
   const deleteEmail = useDeleteEmail();
@@ -45,13 +41,10 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
 
   const { data: classifyJob } = useJob(classifyJobId);
 
-  // Reset state when email changes
   useEffect(() => {
     setClassifyJobId(null);
-    setShowReply(false);
   }, [email?.id]);
 
-  // Handle classify job completion
   useEffect(() => {
     if (classifyJob?.status === 'done') {
       if (email?.id && classifyJob.result) {
@@ -132,7 +125,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
         <div className="text-center">
           <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p>Select an email to view details</p>
-          <p className="text-sm mt-1">Use ↑↓ or j/k to navigate</p>
+          <p className="text-sm mt-1">Use arrow keys or j/k to navigate</p>
         </div>
       </div>
     );
@@ -162,7 +155,6 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
       transition={{ duration: 0.2 }}
       className="h-full flex flex-col"
     >
-      {/* Header */}
       <div className="p-6 border-b border-border">
         <div className="flex items-start justify-between gap-4 mb-4">
           <h2 className="text-xl font-semibold text-foreground leading-tight">
@@ -223,10 +215,9 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
           </div>
         </div>
 
-        {/* Classification info */}
         <div className="flex items-center flex-wrap gap-2">
           {priorityLabel && email.priorityScore !== undefined && (
-            <PriorityIndicator 
+            <PriorityIndicator
               priority={priorityLabel}
               score={email.priorityScore}
               showLabel
@@ -238,7 +229,6 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
           )}
         </div>
 
-        {/* Summary */}
         {email.summary && (
           <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1">
@@ -250,9 +240,8 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
         )}
       </div>
 
-      {/* Actions — only shown in inbox mode */}
       {mode === 'inbox' && (
-        <div className="p-4 border-b border-border flex flex-wrap gap-2">
+        <div className="p-4 border-b border-border flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -263,35 +252,17 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
             <RotateCw className={cn('h-4 w-4', classifyJobId && 'animate-spin')} />
             Re-classify
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onGenerateDraft}
-            className="gap-2"
-          >
+          <div className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
             <FileText className="h-4 w-4" />
-            Full Editor
-            <ArrowRight className="h-4 w-4" />
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => setShowReply(true)}
-            disabled={showReply}
-            className="gap-2 ml-auto"
-          >
-            <Reply className="h-4 w-4" />
-            Reply
-          </Button>
+            AI draft now lives directly under this email
+          </div>
         </div>
       )}
 
-      {/* Conversation Thread */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {threadMessages && threadMessages.length > 1 ? (
           <div className="divide-y divide-border">
             {threadMessages.map((msg) => {
-              // If the message's from matches the original email's from, it's from the sender
-              // Otherwise it's from the current user (a sent reply)
               const isFromSender = !msg.isSent;
               return (
                 <div
@@ -345,27 +316,19 @@ export function EmailDetailPanel({ email, isLoading, onClose, onGenerateDraft, m
         )}
       </div>
 
-      {/* Reply Composer — only in inbox mode */}
-      <AnimatePresence>
-        {mode === 'inbox' && showReply && (
-          <ReplyComposer
-            email={email}
-            onSent={() => {
-              setShowReply(false);
-              // Give Gmail a moment to index the sent reply into the thread
-              // before refetching, then refetch again after a longer delay
-              // in case the first one was too early.
-              setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
-              }, 1500);
-              setTimeout(() => {
-                queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
-              }, 4000);
-            }}
-            onClose={() => setShowReply(false)}
-          />
-        )}
-      </AnimatePresence>
+      {mode === 'inbox' && (
+        <ReplyComposer
+          email={email}
+          onSent={() => {
+            setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+            }, 1500);
+            setTimeout(() => {
+              queryClient.invalidateQueries({ queryKey: ['thread', email.id] });
+            }, 4000);
+          }}
+        />
+      )}
     </motion.div>
   );
 }

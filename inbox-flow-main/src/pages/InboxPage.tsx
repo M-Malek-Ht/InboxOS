@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { Email } from '@/lib/types';
 import { InboxList } from '@/components/inbox/InboxList';
 import { EmailDetailPanel } from '@/components/inbox/EmailDetailPanel';
-import { DraftEditor } from '@/components/drafts/DraftEditor';
 import { useEmail, useEmails, useAutoClassify } from '@/lib/api/hooks';
 import { AnimatePresence } from 'framer-motion';
 import { PageTransition } from '@/components/PageTransition';
@@ -10,7 +9,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 export default function InboxPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showDraftEditor, setShowDraftEditor] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -30,12 +28,10 @@ export default function InboxPage() {
 
   const handleSelect = useCallback((email: Email) => {
     setSelectedId(email.id);
-    setShowDraftEditor(false);
   }, []);
 
   const handleClose = useCallback(() => {
     setSelectedId(null);
-    setShowDraftEditor(false);
   }, []);
 
   return (
@@ -49,21 +45,12 @@ export default function InboxPage() {
       {/* Detail Panel */}
       <div className="flex-1 overflow-hidden">
         <AnimatePresence mode="wait">
-          {showDraftEditor && selectedEmail ? (
-            <DraftEditor
-              key="draft"
-              email={selectedEmail}
-              onClose={() => setShowDraftEditor(false)}
-            />
-          ) : (
-            <EmailDetailPanel
-              key="detail"
-              email={selectedEmail || null}
-              isLoading={isLoading}
-              onClose={handleClose}
-              onGenerateDraft={() => setShowDraftEditor(true)}
-            />
-          )}
+          <EmailDetailPanel
+            key={selectedEmail?.id || 'detail'}
+            email={selectedEmail || null}
+            isLoading={isLoading}
+            onClose={handleClose}
+          />
         </AnimatePresence>
       </div>
     </div>

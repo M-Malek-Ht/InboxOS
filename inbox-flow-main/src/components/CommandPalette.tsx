@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/command';
 import {
   Inbox,
-  FileText,
   Settings,
   Search,
   Mail,
@@ -61,7 +60,6 @@ export function CommandPalette({
   const pages = [
     { name: 'Dashboard', path: '/', icon: Search },
     { name: 'Inbox', path: '/inbox', icon: Inbox },
-    { name: 'Drafts', path: '/drafts', icon: FileText },
     { name: 'Settings', path: '/settings', icon: Settings },
   ];
 
