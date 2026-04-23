@@ -136,7 +136,7 @@ export const api = {
   markEmailRead: async (id: string, isRead: boolean) =>
     http.patch<EmailApiResponse | { ok: boolean }>(`/emails/${encodePathSegment(id)}`, { isRead }),
   updateEmailPriority: async (id: string, priorityScore: number) =>
-    http.patch<EmailApiResponse>(`/emails/${encodePathSegment(id)}`, { priorityScore }),
+    http.patch<EmailApiResponse>(`/emails/${encodePathSegment(id)}`, { priorityScore }).then(mapEmail),
 
   // Reply
   sendReply: async (emailId: string, body: string, draftId?: string) =>
