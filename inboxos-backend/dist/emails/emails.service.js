@@ -170,6 +170,28 @@ let EmailsService = EmailsService_1 = class EmailsService {
         await this.repo.update({ id: emailId, userId }, { isRead });
         return this.repo.findOne({ where: { id: emailId, userId } });
     }
+    async updatePriorityScore(userId, emailId, priorityScore) {
+        const email = await this.getForUser(userId, emailId);
+        if (!email) {
+            throw new common_1.NotFoundException('Email not found');
+        }
+        const normalizedScore = Math.max(0, Math.min(100, Math.round(priorityScore)));
+        const existingInsight = await this.insightsRepo.findOne({
+            where: { userId, emailId },
+        });
+        const insight = this.insightsRepo.create({
+            ...(existingInsight ?? {}),
+            userId,
+            emailId,
+            category: existingInsight?.category ?? 'Other',
+            priorityScore: normalizedScore,
+            needsReply: existingInsight?.needsReply ?? false,
+            tags: existingInsight?.tags ?? [],
+            summary: existingInsight?.summary ?? '',
+        });
+        await this.insightsRepo.save(insight);
+        return this.attachInsight(userId, email);
+    }
     async getThread(userId, emailId) {
         const providerClient = await this.resolveProviderClient(userId);
         if (providerClient?.provider === 'gmail') {

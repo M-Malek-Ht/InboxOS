@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { EmailEntity } from './email.entity';
@@ -201,6 +201,32 @@ export class EmailsService {
 
     await this.repo.update({ id: emailId, userId }, { isRead });
     return this.repo.findOne({ where: { id: emailId, userId } });
+  }
+
+  async updatePriorityScore(userId: string, emailId: string, priorityScore: number) {
+    const email = await this.getForUser(userId, emailId);
+    if (!email) {
+      throw new NotFoundException('Email not found');
+    }
+
+    const normalizedScore = Math.max(0, Math.min(100, Math.round(priorityScore)));
+    const existingInsight = await this.insightsRepo.findOne({
+      where: { userId, emailId },
+    });
+
+    const insight = this.insightsRepo.create({
+      ...(existingInsight ?? {}),
+      userId,
+      emailId,
+      category: existingInsight?.category ?? 'Other',
+      priorityScore: normalizedScore,
+      needsReply: existingInsight?.needsReply ?? false,
+      tags: existingInsight?.tags ?? [],
+      summary: existingInsight?.summary ?? '',
+    });
+
+    await this.insightsRepo.save(insight);
+    return this.attachInsight(userId, email);
   }
 
   async getThread(userId: string, emailId: string) {

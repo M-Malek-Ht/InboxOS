@@ -84,6 +84,49 @@ export function useClassifyEmail() {
   });
 }
 
+export function useUpdateEmailPriority() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, priorityScore }: { id: string; priorityScore: number }) =>
+      api.updateEmailPriority(id, priorityScore),
+    onMutate: async ({ id, priorityScore }) => {
+      const normalizedScore = Math.max(0, Math.min(100, Math.round(priorityScore)));
+
+      await queryClient.cancelQueries({ queryKey: ['emails'] });
+      await queryClient.cancelQueries({ queryKey: ['email', id] });
+
+      const previousEmail = queryClient.getQueryData<Email>(['email', id]);
+      queryClient.setQueryData<Email>(['email', id], (old) =>
+        old ? { ...old, priorityScore: normalizedScore } : old,
+      );
+
+      queryClient.setQueriesData<EmailListData>({ queryKey: ['emails'] }, (old) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((email) =>
+            email.id === id ? { ...email, priorityScore: normalizedScore } : email,
+          ),
+        };
+      });
+
+      return { previousEmail };
+    },
+    onError: (_err, { id }, context) => {
+      if (context?.previousEmail) {
+        queryClient.setQueryData(['email', id], context.previousEmail);
+      }
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+    },
+    onSuccess: (updatedEmail, { id }) => {
+      queryClient.setQueryData(['email', id], updatedEmail);
+      queryClient.invalidateQueries({ queryKey: ['emails'] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.email(id) });
+    },
+  });
+}
+
 export function useSendReply() {
   const queryClient = useQueryClient();
 

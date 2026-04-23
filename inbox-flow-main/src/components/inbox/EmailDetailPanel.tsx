@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Email } from '@/lib/types';
-import { useClassifyEmail, useJob, useThread, useDeleteEmail, useUntrashEmail, usePermanentlyDeleteEmail } from '@/lib/api/hooks';
+import { useClassifyEmail, useJob, useThread, useDeleteEmail, useUntrashEmail, usePermanentlyDeleteEmail, useUpdateEmailPriority } from '@/lib/api/hooks';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { PriorityIndicator, JobStatus } from '@/components/ui/badges';
 import { EmailDetailSkeleton } from '@/components/ui/skeletons';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { ReplyComposer } from './ReplyComposer';
 import { toast } from 'sonner';
 import {
@@ -34,16 +35,22 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
   const [classifyJobId, setClassifyJobId] = useState<string | null>(null);
 
   const classifyEmail = useClassifyEmail();
+  const updateEmailPriority = useUpdateEmailPriority();
   const deleteEmail = useDeleteEmail();
   const untrashEmail = useUntrashEmail();
   const permanentlyDeleteEmail = usePermanentlyDeleteEmail();
   const { data: threadMessages } = useThread(mode === 'inbox' ? (email?.id ?? null) : null);
 
   const { data: classifyJob } = useJob(classifyJobId);
+  const [priorityInput, setPriorityInput] = useState('');
 
   useEffect(() => {
     setClassifyJobId(null);
   }, [email?.id]);
+
+  useEffect(() => {
+    setPriorityInput(email?.priorityScore !== undefined ? String(email.priorityScore) : '50');
+  }, [email?.id, email?.priorityScore]);
 
   useEffect(() => {
     if (classifyJob?.status === 'done') {
@@ -116,6 +123,29 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
       onClose();
     } catch {
       toast.error('Failed to permanently delete email');
+    }
+  };
+
+  const handlePrioritySave = async () => {
+    if (!email) return;
+
+    const parsed = Number(priorityInput);
+    if (!Number.isFinite(parsed)) {
+      toast.error('Priority score must be a number');
+      return;
+    }
+
+    const normalizedScore = Math.max(0, Math.min(100, Math.round(parsed)));
+
+    try {
+      await updateEmailPriority.mutateAsync({
+        id: email.id,
+        priorityScore: normalizedScore,
+      });
+      setPriorityInput(String(normalizedScore));
+      toast.success('Priority score updated');
+    } catch {
+      toast.error('Failed to update priority score');
     }
   };
 
@@ -228,6 +258,33 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
             <JobStatus status={classifyJob?.status || 'queued'} />
           )}
         </div>
+
+        {mode === 'inbox' && (
+          <div className="mt-4 flex items-end gap-2">
+            <div className="w-24">
+              <div className="mb-1 text-xs font-medium text-muted-foreground">
+                Priority score
+              </div>
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step={1}
+                value={priorityInput}
+                onChange={(e) => setPriorityInput(e.target.value)}
+                className="h-9"
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePrioritySave}
+              disabled={updateEmailPriority.isPending}
+            >
+              Save score
+            </Button>
+          </div>
+        )}
 
         {email.summary && (
           <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">

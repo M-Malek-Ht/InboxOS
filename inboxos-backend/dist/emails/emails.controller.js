@@ -52,7 +52,13 @@ let EmailsController = class EmailsController {
             throw new common_1.NotFoundException('Email not found');
         return email;
     }
-    async setRead(id, body, req) {
+    async update(id, body, req) {
+        if (typeof body.priorityScore === 'number') {
+            if (!Number.isFinite(body.priorityScore)) {
+                throw new common_1.BadRequestException('priorityScore must be a finite number');
+            }
+            return this.emails.updatePriorityScore(req.user.id, id, body.priorityScore);
+        }
         return this.emails.setReadState(req.user.id, id, !!body.isRead);
     }
     async classifyBatch(body, req) {
@@ -161,7 +167,7 @@ __decorate([
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String, Object, Object]),
     __metadata("design:returntype", Promise)
-], EmailsController.prototype, "setRead", null);
+], EmailsController.prototype, "update", null);
 __decorate([
     (0, common_1.Post)('classify-batch'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),

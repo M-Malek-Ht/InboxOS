@@ -26,6 +26,7 @@ export declare class EmailsService {
     setReadState(userId: string, emailId: string, isRead: boolean): Promise<EmailEntity | {
         ok: boolean;
     } | null>;
+    updatePriorityScore(userId: string, emailId: string, priorityScore: number): Promise<EmailEntity | ParsedEmail>;
     getThread(userId: string, emailId: string): Promise<ParsedEmail[] | EmailEntity[]>;
     sendReply(userId: string, emailId: string, body: string, draftId?: string): Promise<{
         ok: boolean;

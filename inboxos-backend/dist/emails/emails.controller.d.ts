@@ -9,9 +9,10 @@ export declare class EmailsController {
     listTrash(req: any, search?: string, limit?: string): Promise<import("./email.entity").EmailEntity[]>;
     getThread(id: string, req: any): Promise<import("./email.types").ParsedEmail[] | import("./email.entity").EmailEntity[]>;
     get(id: string, req: any): Promise<import("./email.entity").EmailEntity | import("./email.types").ParsedEmail>;
-    setRead(id: string, body: {
-        isRead: boolean;
-    }, req: any): Promise<import("./email.entity").EmailEntity | {
+    update(id: string, body: {
+        isRead?: boolean;
+        priorityScore?: number;
+    }, req: any): Promise<import("./email.entity").EmailEntity | import("./email.types").ParsedEmail | {
         ok: boolean;
     } | null>;
     classifyBatch(body: {

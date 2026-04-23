@@ -19,6 +19,7 @@ describe('EmailsController', () => {
             getThread: jest.fn(),
             getForUser: jest.fn(),
             setReadState: jest.fn(),
+            updatePriorityScore: jest.fn(),
             getUnclassifiedIds: jest.fn(),
             permanentDeleteEmail: jest.fn(),
             deleteEmail: jest.fn(),

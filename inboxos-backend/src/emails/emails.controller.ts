@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Delete, NotFoundException, Patch, Query, UseGuards, Request } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Delete, NotFoundException, Patch, Query, UseGuards, Request, BadRequestException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EmailsService } from './emails.service';
 import { JobRunnerService } from '../jobs/job-runner.service';
@@ -67,11 +67,18 @@ export class EmailsController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  async setRead(
+  async update(
     @Param('id') id: string,
-    @Body() body: { isRead: boolean },
+    @Body() body: { isRead?: boolean; priorityScore?: number },
     @Request() req: any,
   ) {
+    if (typeof body.priorityScore === 'number') {
+      if (!Number.isFinite(body.priorityScore)) {
+        throw new BadRequestException('priorityScore must be a finite number');
+      }
+      return this.emails.updatePriorityScore(req.user.id, id, body.priorityScore);
+    }
+
     return this.emails.setReadState(req.user.id, id, !!body.isRead);
   }
 
