@@ -39,6 +39,12 @@ export class JobRunnerService implements OnApplicationBootstrap {
       throw new Error(`Missing userId in payload for job type: ${type}`);
     }
 
+    const existing = await this.jobs.findActiveByTypeAndUser(type, userId);
+    if (existing) {
+      this.log.log(`Job ${existing.id} [${type}] already active for user, reusing`);
+      return existing.id;
+    }
+
     const job = await this.jobs.create(type, payload, userId);
     this.log.log(`Job ${job.id} [${type}] queued`);
 

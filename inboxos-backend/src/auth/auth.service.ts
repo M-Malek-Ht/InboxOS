@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -53,5 +53,19 @@ export class AuthService {
 
   generateToken(user: User): string {
     return this.jwtService.sign({ sub: user.id, email: user.email });
+  }
+
+  async refreshToken(currentToken: string): Promise<string> {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(currentToken, { ignoreExpiration: true });
+    } catch {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const user = await this.usersService.findById(payload.sub);
+    if (!user) throw new UnauthorizedException('User not found');
+
+    return this.generateToken(user);
   }
 }

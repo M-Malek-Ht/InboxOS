@@ -52,6 +52,16 @@ export class JobsService {
     await this.repo.update(id, { status: 'failed', error });
   }
 
+  async findActiveByTypeAndUser(type: string, userId: string): Promise<JobEntity | null> {
+    return this.repo.findOne({
+      where: [
+        { type, userId, status: 'queued' },
+        { type, userId, status: 'processing' },
+      ],
+      order: { createdAt: 'DESC' },
+    });
+  }
+
   async findRecoverable(): Promise<JobEntity[]> {
     const staleThreshold = new Date(Date.now() - STALE_PROCESSING_MS);
     return this.repo

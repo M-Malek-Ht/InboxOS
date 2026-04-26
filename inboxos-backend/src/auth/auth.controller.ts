@@ -84,6 +84,23 @@ res.cookie('accessToken', token, {
     return req.user;
   }
 
+  @Get('refresh')
+  async refresh(@Request() req: any, @Response() res: any) {
+    const token = req.cookies?.accessToken;
+    if (!token) throw new HttpException('No token', HttpStatus.UNAUTHORIZED);
+
+    const newToken = await this.authService.refreshToken(token);
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('accessToken', newToken, {
+      httpOnly: true,
+      sameSite: isProd ? 'none' : 'lax',
+      secure: isProd,
+      path: '/',
+      maxAge: 60 * 60 * 1000,
+    });
+    res.json({ ok: true });
+  }
+
   @Get('logout')
   async logout(@Response() res: any) {
     res.clearCookie('accessToken');
