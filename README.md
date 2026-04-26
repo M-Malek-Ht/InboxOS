@@ -1,6 +1,6 @@
-📬 Inbox Flow
+📬 InboxOS
 
-Inbox Flow is a full-stack web application that provides an organized and efficient inbox-style workflow for managing messages and tasks.
+InboxOS is a full-stack web application that provides an organized and efficient inbox-style workflow for managing messages and tasks.
 The project includes both a frontend (client) and a backend (server) in a single repository.
 
 🚀 Features
