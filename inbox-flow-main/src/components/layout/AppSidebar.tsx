@@ -21,6 +21,7 @@ const navItems = [
   { name: 'Inbox', path: '/inbox', icon: Inbox },
   { name: 'Sent', path: '/sent', icon: Send },
   { name: 'Trash', path: '/trash', icon: Trash2 },
+  { name: 'Settings', path: '/settings', icon: Settings },
 ];
 
 export function AppSidebar() {
@@ -90,35 +91,11 @@ export function AppSidebar() {
         </ul>
       </nav>
 
-      {/* Settings + User */}
-      <div className="p-2 border-t border-sidebar-border space-y-1">
-        <NavLink
-          to="/settings"
-          className={cn(
-            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium',
-            'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-            'transition-colors duration-150',
-            collapsed && 'justify-center px-0'
-          )}
-          activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
-        >
-          <Settings className="h-5 w-5 flex-shrink-0" />
-          <AnimatePresence mode="wait">
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                Settings
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </NavLink>
-
-        {/* User row — avatar + email + logout */}
-        {user && (
+      {/* User row */}
+      {user && (
+        <div className={cn(
+          'p-2 border-t border-sidebar-border',
+        )}>
           <div className={cn(
             'flex items-center gap-2 px-3 py-2 rounded-lg',
             collapsed && 'flex-col gap-1 px-0'
@@ -146,8 +123,8 @@ export function AppSidebar() {
               <LogOut className="h-4 w-4" />
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Collapse Toggle */}
       <Button
