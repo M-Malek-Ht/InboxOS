@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationBootstrap } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { JobsService } from './jobs.service';
@@ -8,7 +8,7 @@ import { EmailInsightEntity } from '../emails/email-insight.entity';
 import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
-export class JobRunnerService {
+export class JobRunnerService implements OnApplicationBootstrap {
   private readonly log = new Logger(JobRunnerService.name);
   private static readonly RATE_LIMIT_DELAY_MS = 1500;
 
@@ -21,6 +21,17 @@ export class JobRunnerService {
     @InjectRepository(EmailInsightEntity)
     private readonly insightsRepo: Repository<EmailInsightEntity>,
   ) {}
+
+  async onApplicationBootstrap(): Promise<void> {
+    const stuck = await this.jobs.findRecoverable();
+    if (stuck.length === 0) return;
+    this.log.log(`Recovering ${stuck.length} abandoned job(s) on startup`);
+    for (const job of stuck) {
+      this.process(job.id, job.type, job.payload ?? {}).catch((err: any) =>
+        this.log.error(`Recovery failed for job ${job.id}: ${this.getErrorMessage(err)}`),
+      );
+    }
+  }
 
   async enqueue(type: string, payload: Record<string, any>): Promise<string> {
     const userId = this.getUserIdFromPayload(payload);

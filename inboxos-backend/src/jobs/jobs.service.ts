@@ -3,6 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JobEntity } from './job.entity';
 
+// Jobs stuck in 'processing' longer than this are assumed abandoned (Lambda died mid-run).
+// Worst-case batch: 40 emails × (4s AI + 1.5s delay) ≈ 4 min. 10 min is a safe threshold.
+const STALE_PROCESSING_MS = 10 * 60 * 1000;
+
 @Injectable()
 export class JobsService {
   constructor(
@@ -46,5 +50,18 @@ export class JobsService {
 
   async markFailed(id: string, error: string): Promise<void> {
     await this.repo.update(id, { status: 'failed', error });
+  }
+
+  async findRecoverable(): Promise<JobEntity[]> {
+    const staleThreshold = new Date(Date.now() - STALE_PROCESSING_MS);
+    return this.repo
+      .createQueryBuilder('job')
+      .where('job.status = :queued', { queued: 'queued' })
+      .orWhere('job.status = :processing AND job."updatedAt" < :threshold', {
+        processing: 'processing',
+        threshold: staleThreshold,
+      })
+      .orderBy('job.createdAt', 'ASC')
+      .getMany();
   }
 }
