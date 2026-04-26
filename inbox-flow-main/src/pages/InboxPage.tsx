@@ -38,7 +38,7 @@ export default function InboxPage() {
     <PageTransition>
     <div className="h-[calc(100vh-3.5rem)] flex">
       {/* Email List */}
-      <div className="w-96 flex-shrink-0 border-r border-border overflow-hidden">
+      <div className="w-80 flex-shrink-0 border-r border-border overflow-hidden">
         <InboxList selectedId={selectedId || undefined} onSelect={handleSelect} />
       </div>
 

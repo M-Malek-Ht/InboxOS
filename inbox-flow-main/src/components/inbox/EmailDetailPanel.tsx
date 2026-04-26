@@ -185,8 +185,8 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
       transition={{ duration: 0.2 }}
       className="h-full flex flex-col"
     >
-      <div className="p-6 border-b border-border">
-        <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="px-5 py-4 border-b border-border">
+        <div className="flex items-start justify-between gap-4 mb-3">
           <h2 className="text-xl font-semibold text-foreground leading-tight">
             {email.subject}
           </h2>
@@ -232,7 +232,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
           </div>
         </div>
 
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-3">
           <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-medium">
             {email.fromName.charAt(0).toUpperCase()}
           </div>
@@ -260,7 +260,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
         </div>
 
         {mode === 'inbox' && (
-          <div className="mt-4 flex items-end gap-2">
+          <div className="mt-3 flex items-end gap-2">
             <div className="w-24">
               <div className="mb-1 text-xs font-medium text-muted-foreground">
                 Priority score
@@ -287,7 +287,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
         )}
 
         {email.summary && (
-          <div className="mt-4 p-3 rounded-lg bg-muted/50 border border-border">
+          <div className="mt-3 p-3 rounded-lg bg-muted/50 border border-border">
             <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-1">
               <Sparkles className="h-3 w-3" />
               AI Summary
@@ -349,7 +349,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
                       {format(new Date(msg.receivedAt), 'MMM d, h:mm a')}
                     </span>
                   </div>
-                  <div className="pl-9 prose prose-sm prose-neutral dark:prose-invert max-w-none">
+                  <div className="pl-9 prose prose-sm prose-neutral dark:prose-invert max-w-none text-sm">
                     {(msg.bodyText || '').split('\n').map((line: string, i: number) => (
                       <p key={i} className={cn(!line && 'h-3')}>
                         {line}
@@ -361,7 +361,7 @@ export function EmailDetailPanel({ email, isLoading, onClose, mode = 'inbox' }: 
             })}
           </div>
         ) : (
-          <div className="p-6">
+          <div className="px-5 py-4">
             <div className="prose prose-sm prose-neutral dark:prose-invert max-w-none">
               {email.bodyText.split('\n').map((paragraph, i) => (
                 <p key={i} className={cn(!paragraph && 'h-4')}>

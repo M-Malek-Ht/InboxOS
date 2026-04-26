@@ -117,35 +117,36 @@ export function AppSidebar() {
           </AnimatePresence>
         </NavLink>
 
-        {/* Signed-in email */}
-        {!collapsed && user && (
-          <p className="px-3 py-1 text-xs text-muted-foreground truncate">{user.email}</p>
+        {/* User row — avatar + email + logout */}
+        {user && (
+          <div className={cn(
+            'flex items-center gap-2 px-3 py-2 rounded-lg',
+            collapsed && 'flex-col gap-1 px-0'
+          )}>
+            <div className="w-7 h-7 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0 text-xs font-semibold text-primary">
+              {user.email.charAt(0).toUpperCase()}
+            </div>
+            <AnimatePresence mode="wait">
+              {!collapsed && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="text-xs text-muted-foreground truncate flex-1 min-w-0 overflow-hidden"
+                >
+                  {user.email}
+                </motion.span>
+              )}
+            </AnimatePresence>
+            <button
+              onClick={logout}
+              title="Log out"
+              className="flex-shrink-0 text-muted-foreground hover:text-sidebar-foreground transition-colors duration-150 p-0.5 rounded"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          </div>
         )}
-
-        {/* Logout */}
-        <button
-          onClick={logout}
-          className={cn(
-            'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium w-full',
-            'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
-            'transition-colors duration-150',
-            collapsed && 'justify-center px-0'
-          )}
-        >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
-          <AnimatePresence mode="wait">
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="overflow-hidden whitespace-nowrap"
-              >
-                Log out
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </button>
       </div>
 
       {/* Collapse Toggle */}
