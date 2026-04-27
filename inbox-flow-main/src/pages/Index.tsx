@@ -450,6 +450,9 @@ const Index = () => {
               <a href="#demo" className="hover:text-foreground transition-colors">
                 Demo
               </a>
+              <Link to="/privacy" className="hover:text-foreground transition-colors">
+                Privacy Policy
+              </Link>
               <Link to="/login" className="hover:text-foreground transition-colors">
                 Login
               </Link>
