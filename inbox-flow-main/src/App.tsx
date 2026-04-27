@@ -15,6 +15,7 @@ import TrashPage from "./pages/TrashPage";
 import SettingsPage from "./pages/SettingsPage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
+import PrivacyPolicyPage from "./pages/PrivacyPolicyPage";
 import { Sparkles } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="/drafts" element={<Navigate to="/inbox" replace />} />
                 <Route path="/settings" element={<SettingsPage />} />
               </Route>
+              <Route path="/privacy" element={<PrivacyPolicyPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AuthProvider>

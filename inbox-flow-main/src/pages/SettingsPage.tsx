@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useTheme } from '@/components/ThemeProvider';
 import { useResetDemoData, useSettings, useUpdateSettings } from '@/lib/api/hooks';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { RefreshCw, Moon, Sun, Monitor, Sparkles } from 'lucide-react';
+import { RefreshCw, Moon, Sun, Monitor, Sparkles, Shield, ExternalLink } from 'lucide-react';
 import { PageTransition } from '@/components/PageTransition';
 import { useModKey } from '@/lib/hooks/useOS';
 import { Theme } from '@/components/ThemeProvider';
@@ -144,6 +145,27 @@ export default function SettingsPage() {
             <div className="flex justify-between"><span>Navigate down</span><kbd className="kbd">J</kbd></div>
             <div className="flex justify-between"><span>Open item</span><kbd className="kbd">Enter</kbd></div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Privacy & Legal
+          </CardTitle>
+          <CardDescription>
+            InboxOS accesses your emails only to power the features you use. We never sell your data.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link
+            to="/privacy"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline underline-offset-2"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Read our Privacy Policy
+          </Link>
         </CardContent>
       </Card>
     </div>

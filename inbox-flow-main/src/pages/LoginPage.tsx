@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthContext';
 import { Button } from '@/components/ui/button';
 import { PageTransition } from '@/components/PageTransition';
@@ -85,6 +85,15 @@ export default function LoginPage() {
               </Button>
             </motion.div>
           </motion.div>
+
+          {/* Privacy notice */}
+          <motion.p variants={fadeUp} className="text-xs text-muted-foreground text-center mt-6 leading-relaxed">
+            By signing in you agree to our{' '}
+            <Link to="/privacy" className="text-foreground underline underline-offset-2 hover:text-primary transition-colors">
+              Privacy Policy
+            </Link>
+            . InboxOS accesses your emails only to power the features you use.
+          </motion.p>
         </motion.div>
       </div>
     </PageTransition>
